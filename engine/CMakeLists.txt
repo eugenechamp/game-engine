@@ -40,3 +40,28 @@ target_link_libraries(
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
+
+target_precompile_headers(engine-runtime
+PUBLIC
+  <iostream>
+  <optional>
+  <filesystem>
+  <vector>
+  <chrono>
+  <utility>
+  <cstdint>
+  <memory>
+  <span>
+  <set>
+  <cstring>
+  <source_location>
+  <fmt/core.h>
+  <unordered_map>
+  <map>
+  <functional>
+  <string_view>
+  <string>
+  <type_traits>
+  <cstdint>
+  <cstddef>
+)

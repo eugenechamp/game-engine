@@ -12,7 +12,6 @@ using StringID = uint32_t;
 
 namespace core {
   
-
   namespace detail {
     
     template<typename>

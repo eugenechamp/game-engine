@@ -1,10 +1,10 @@
 #pragma once
-#include "def.hpp"
-#include "meta.hpp"
+#include "app.hpp"
 #include "type_traits.hpp"
 
-#include "app.hpp"
-#include "batcher.hpp"
+//#include "def.hpp"
+//#include "meta.hpp"
+//#include "batcher.hpp"
 
 class Events final {
   friend class App;
@@ -46,7 +46,7 @@ public:
     {
       return events.batch<typename Res::element_type>();
     }
-    else 
+    else
     {
       return events.app_.get<Res>();
     }

@@ -8,7 +8,7 @@ namespace traits {
   namespace _ {
     template<typename T>
     struct decay_functor {
-      using type =  decay_functor<decltype(&T::operator())>::type;
+      using type = decay_functor<decltype(&T::operator())>::type;
     };
 
     template<typename Instance, typename... Args>
@@ -35,7 +35,7 @@ namespace traits {
     struct is_batcher<Batcher<T>> {
       static constexpr bool value = true;
     };
-    
+
     template<typename T>
     struct is_qeury {
       static constexpr bool value = false;
@@ -45,5 +45,3 @@ namespace traits {
 
 template<typename C, typename F>
 concept Callable = std::is_function_v<F> && std::is_same_v<F, typename traits::_::decay_functor<C>::type>;
-
-

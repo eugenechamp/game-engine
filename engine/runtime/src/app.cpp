@@ -3,10 +3,10 @@
 #include "runtime/commands.hpp"
 #include "runtime/events.hpp"
 #include "runtime/subsystem.hpp"
+#include "runtime/window.hpp"
+#include "runtime/batcher.hpp"
 
 #include <SDL3/SDL.h>
-
-#include <iostream>
 
 void App::init_subsystem(Subsystem *subsystem) {
   // should I actually be doing this? maybe initialize it right away after the constructor call
@@ -60,24 +60,24 @@ App::App() {
   float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
   SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-  window_ = Window {
+  window_ = std::make_unique<Window>(Window{
     .width = 640,
     .height = 480,
     .handle = SDL_CreateWindow("App", 1280, 720, window_flags),
     .title = "MyGame"
-  };
+  });
 
-  SDL_GLContext gl_context = SDL_GL_CreateContext(window_.handle);
+  SDL_GLContext gl_context = SDL_GL_CreateContext(window_->handle);
 
   if (gl_context == nullptr)
   {
     printf("Error: SDL_GL_CreateContext(): %s\n", SDL_GetError());
   }
 
-  SDL_GL_MakeCurrent(window_.handle, gl_context);
+  SDL_GL_MakeCurrent(window_->handle, gl_context);
   SDL_GL_SetSwapInterval(1); // Enable vsync
-  SDL_SetWindowPosition(window_.handle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  SDL_ShowWindow(window_.handle);
+  SDL_SetWindowPosition(window_->handle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  SDL_ShowWindow(window_->handle);
 
   events()
     .add_event<SDL_KeyboardEvent>()

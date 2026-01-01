@@ -1,6 +1,6 @@
 #pragma once
 #include "def.hpp"
-
+// TODO: encapsulate it better 
 struct ResourceStorageBase {
   virtual ~ResourceStorageBase() = default;
 };

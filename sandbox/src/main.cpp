@@ -1,7 +1,8 @@
 #include <runtime/app.hpp>
 #include <runtime/subsystem.hpp>
-#include <iostream>
 #include <runtime/events.hpp>
+#include <runtime/batcher.hpp>
+#include <runtime/window.hpp>
 #include <backends/imgui_impl_sdl3.h>
 
 enum class AppState {
@@ -109,7 +110,8 @@ struct TestBatchEvent {
 
 void on_test_event(Span<const TestEvent> events, Batcher<TestBatchEvent> batch_events) {
   log_info("TestEvent called size: {}", events.size());
-  for(u32 i = 0; auto& event : events) 
+  
+  for(u32 i = 0; auto& event : events)
   {
     batch_events.push_back(TestBatchEvent{ .num = event.num });
   }
@@ -143,6 +145,7 @@ class ImguiEditor : public Subsystem {
       .listen(&ImguiEditor::on_mouse_button,   this)
       .listen(&ImguiEditor::on_mouse_motion,   this);
     
+
     const char* glsl_version = "#version 130";
     SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
@@ -349,6 +352,24 @@ private:
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
   App* app_;
 };
+
+
+enum class FramePhase {
+  Startup,
+  PreUpdate,
+  Update,
+  PostUpdate
+};
+
+struct RagdollPostAnimation;
+struct RagdollPreAnimation;
+
+auto main() -> int {
+  auto app = App();
+  app.add_subsystem<ImguiEditor>();
+
+  app.run();
+}
 
 #if 0
 // Main code
@@ -562,21 +583,3 @@ int main(int, char**)
   return 0;
 }
 #endif // 0
-
-enum class FramePhase {
-  Startup,
-  PreUpdate,
-  Update,
-  PostUpdate
-};
-
-struct RagdollPostAnimation;
-struct RagdollPreAnimation;
-
-auto main() -> int {
-  auto app = App();
-  
-  app.add_subsystem<ImguiEditor>();
-
-  app.run();
-}

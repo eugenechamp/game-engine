@@ -4,9 +4,7 @@
 #include "meta.hpp"
 
 #include "resource.hpp"
-// factor it out
-#include "runtime/window.hpp"
-
+// refactor it out
 
 // NOTE: you could enclose it in the App class, think about that
 struct CmdlineArgs {
@@ -91,7 +89,7 @@ public:
   }
   
   auto main_window() -> Window& {
-    return window_;
+    return *window_;
   }
 
   void run();
@@ -105,8 +103,7 @@ private:
   Unique<World>                          world_;
   Unique<Events>                        events_;
   Unique<Commands>                    commands_;
-  Window window_;
-  // Unique<Window>                   main_window_;
+  Unique<Window>                        window_;
   Resources res_;
   
   // hash map not good
