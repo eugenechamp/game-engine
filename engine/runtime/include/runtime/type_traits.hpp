@@ -1,0 +1,49 @@
+#pragma once
+#include<type_traits>
+    
+template<typename T>
+struct Batcher;
+
+namespace traits {
+  namespace _ {
+    template<typename T>
+    struct decay_functor {
+      using type =  decay_functor<decltype(&T::operator())>::type;
+    };
+
+    template<typename Instance, typename... Args>
+    struct decay_functor<void(Instance::*)(Args...)> {
+      using type = void(Args...);
+    };
+
+    template<typename Instance, typename... Args>
+    struct decay_functor<void(Instance::*)(Args...) const> {
+      using type = void(Args...);
+    };
+
+    template<typename... Args>
+    struct decay_functor<void(*)(Args...)> {
+      using type = void(Args...);
+    };
+  
+    template<typename T>
+    struct is_batcher {
+      static constexpr bool value = false;
+    };
+
+    template<typename T>
+    struct is_batcher<Batcher<T>> {
+      static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_qeury {
+      static constexpr bool value = false;
+    };
+  }
+}
+
+template<typename C, typename F>
+concept Callable = std::is_function_v<F> && std::is_same_v<F, typename traits::_::decay_functor<C>::type>;
+
+

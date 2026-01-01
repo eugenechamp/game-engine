@@ -3,9 +3,14 @@
 #include<map>
 #include<vector>
 #include<memory>
+#include<span>
+#include<functional>
+#include<string_view>
 
 #include <cstddef>
 #include <cstdint>
+
+#include "log.hpp"
 
 using i8 = int8_t;
 using u8 = int8_t;
@@ -56,7 +61,6 @@ using f64 = double;
   #error "FORCE_INLINE redefinition" 
 #endif
 
-
 template<typename T, typename A = std::allocator<T>>
 using Vec = std::vector<T, A>;
 
@@ -71,3 +75,9 @@ using HashMap = std::unordered_map<K, V>;
 
 template<typename K, typename V>
 using Map = std::map<K, V>;
+
+template<typename F>
+using Fn = std::function<F>;
+
+template<typename T>
+using Span = std::span<T>;

@@ -3,7 +3,9 @@
 class App;
 class World;
 class Commands;
-class GameSystem;
-class Events; 
+class Subsystem;
+class Events;
 class Window;
-class ResourceStorage;
+
+template<typename AssetType>
+class AssetCache;

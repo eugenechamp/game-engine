@@ -19,3 +19,5 @@ if(MSVC)
 endif()
 
 add_subdirectory(engine)
+add_subdirectory(3rd_party)
+add_subdirectory(sandbox)
