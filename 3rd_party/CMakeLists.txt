@@ -86,3 +86,5 @@ set(IMGUI_SOURCES
 
 target_sources(libimgui PRIVATE ${IMGUI_SOURCES})
 target_link_libraries(libimgui PUBLIC SDL3::SDL3 PUBLIC opengl32)
+
+add_subdirectory(glad)

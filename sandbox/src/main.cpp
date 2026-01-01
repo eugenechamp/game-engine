@@ -307,8 +307,10 @@ class ImguiEditor : public Subsystem {
   }
 
   void on_keyboard_event(Span<const SDL_KeyboardEvent> events) {
+    
     auto& event = events.front();
     auto& io = ImGui::GetIO();
+    
     ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)(intptr_t)event.windowID);
     if (viewport == nullptr)
       return;

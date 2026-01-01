@@ -36,6 +36,7 @@ target_link_libraries(
   PUBLIC SDL3::SDL3 
   PUBLIC fmt::fmt
   PUBLIC libimgui
+  PUBLIC libglad
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})

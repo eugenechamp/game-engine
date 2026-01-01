@@ -41,7 +41,7 @@ public:
   static auto get_resource(Events& events) -> Res {
     using namespace traits::_;
 
-    //using ResourceType = std::remove_reference_t<Res>;
+    // using ResourceType = std::remove_reference_t<Res>;
     if constexpr(is_batcher<Res>::value)
     {
       return events.batch<typename Res::element_type>();
