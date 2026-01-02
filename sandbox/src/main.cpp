@@ -4,6 +4,7 @@
 #include <runtime/batcher.hpp>
 #include <runtime/window.hpp>
 #include <backends/imgui_impl_sdl3.h>
+#include <glad/glad.h>
 
 enum class AppState {
   Startup,
@@ -40,9 +41,9 @@ class ShowSplash : public StartupSubsystem {
   void update(float dt) override {
     log_info("ShowSplash is running");
 
-    //static float time = 0.f;
-    //time += dt;
-    //std::cout << "time elapsed: " << time << "\n";
+    // static float time = 0.f;
+    // time += dt;
+    // std::cout << "time elapsed: " << time << "\n";
     //
     //if (time >= 5.f) {
     //  should_run_ = false;
@@ -72,7 +73,6 @@ class LoadingSystem : public StartupSubsystem {
     // update and render loading screen
     std::cout << "Loading...\n";
   }
-  
   void shutdown(App&) override { }
 };
 
@@ -109,7 +109,7 @@ struct TestBatchEvent {
 };
 
 void on_test_event(Span<const TestEvent> events, Batcher<TestBatchEvent> batch_events) {
-  log_info("TestEvent called size: {}", events.size());
+  //log_info("TestEvent called size: {}", events.size());
   
   for(u32 i = 0; auto& event : events)
   {
@@ -118,7 +118,7 @@ void on_test_event(Span<const TestEvent> events, Batcher<TestBatchEvent> batch_e
 }
 
 void on_test_batch_event(Span<const TestBatchEvent> events) {
-  log_info("TestBatchEvent called size: {}", events.size());
+  //log_info("TestBatchEvent called size: {}", events.size());
   for (u32 i = 0; auto& event : events)
   {
     //log_info("TestBatchEvent N{}: value: {}", ++i, event.num);
@@ -145,7 +145,6 @@ class ImguiEditor : public Subsystem {
       .listen(&ImguiEditor::on_mouse_button,   this)
       .listen(&ImguiEditor::on_mouse_motion,   this);
     
-
     const char* glsl_version = "#version 130";
     SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
@@ -262,10 +261,11 @@ class ImguiEditor : public Subsystem {
     // Rendering
     ImGui::Render();
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-    glClear(GL_COLOR_BUFFER_BIT);
+    //glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    //glClear(GL_COLOR_BUFFER_BIT);
+    
+    
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window);
   #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
   #endif
@@ -354,6 +354,110 @@ private:
 };
 
 
+class HelloTriangle : public Subsystem {
+  using Subsystem::Subsystem;
+  friend App;
+public:
+  // Inherited via Subsystem
+  void init(App& app) override
+  {
+
+  const char* vert_src = "#version 330 core\n"
+      "layout (location = 0) in vec3 aPos;\n"
+      "void main()\n"
+      "{\n"
+      "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+      "}\0";
+  const char* frag_src = "#version 330 core\n"
+      "out vec4 FragColor;\n"
+      "void main()\n"
+      "{\n"
+      "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+      "}\n\0";
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+    glBindVertexArray(0);
+
+    vert = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vert, 1, &vert_src, NULL);
+    glCompileShader(vert);
+    // check for shader compile errors
+    int success;
+    char infoLog[512];
+    glGetShaderiv(vert, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+      glGetShaderInfoLog(vert, 512, NULL, infoLog);
+      std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+    // fragment shader
+    frag = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(frag, 1, &frag_src, NULL);
+    glCompileShader(frag);
+    // check for shader compile errors
+    glGetShaderiv(frag, GL_COMPILE_STATUS, &success);
+    if (!success)
+    {
+      glGetShaderInfoLog(frag, 512, NULL, infoLog);
+      std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+
+    shader = glCreateProgram();
+
+    glAttachShader(shader, vert);
+    glAttachShader(shader, frag);
+    glLinkProgram(shader);
+  }
+
+  void update(float dt) override
+  {
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw our first triangle
+    glUseProgram(shader);
+    glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // glBindVertexArray(0); // no need to unbind it every time 
+
+    //// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+    //// -------------------------------------------------------------------------------
+    //glfwSwapBuffers(window);
+  }
+
+  void shutdown(App&) override
+  {
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shader);
+  }
+private:
+  static inline float vertices[] = {
+    // Positions
+     0.0f,  0.5f, 0.0f, // Top
+     0.5f, -0.5f, 0.0f, // Bottom Right
+    -0.5f, -0.5f, 0.0f  // Bottom Left
+  };
+  u32 vert, frag{};
+  u32 VBO, VAO{};
+  u32 shader{};
+};
+
 enum class FramePhase {
   Startup,
   PreUpdate,
@@ -361,13 +465,11 @@ enum class FramePhase {
   PostUpdate
 };
 
-struct RagdollPostAnimation;
-struct RagdollPreAnimation;
-
 auto main() -> int {
   auto app = App();
+  app.add_subsystem<HelloTriangle>();
   app.add_subsystem<ImguiEditor>();
-
+  
   app.run();
 }
 

@@ -25,8 +25,8 @@ private:
   virtual void serialize()              {}
   virtual void deserialize()            {}
   
-  virtual bool run_condition(App&)      = 0;
-  virtual bool shutdown_condition(App&) = 0;
+  virtual bool run_condition(App&) { return true; };
+  virtual bool shutdown_condition(App&) { return false; }
 
 protected:
   auto world() -> World& {

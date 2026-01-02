@@ -6,14 +6,14 @@
 #include "resource.hpp"
 // refactor it out
 
-// NOTE: you could enclose it in the App class, think about that
+/// NOTE: you could enclose it in the App class, think about that
 struct CmdlineArgs {
   int    argc{};
   char** argv{};
 };
 
 class App {
-  // TODO: make this a singleton
+  /// TODO: make this a singleton
 public:
   App();
   ~App();

@@ -7,41 +7,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SDL)
 
-if(SDL_SHARED)
-  set_target_properties(SDL3-shared PROPERTIES 
-          FOLDER "Deps"
-          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
-else()
-  set_target_properties(SDL3-static PROPERTIES 
-          FOLDER "Deps"
-          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
-endif()
-
 FetchContent_Declare(
   flecs
   GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
   GIT_TAG v4.0.5
 )
-
 FetchContent_MakeAvailable(flecs)
-
-set_target_properties(flecs PROPERTIES 
-        FOLDER "Deps"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
-
 
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
   GIT_TAG 12.0.0
 )
-
 FetchContent_MakeAvailable(fmt)
-
-set_target_properties(fmt PROPERTIES 
-        FOLDER "Deps"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
-
 
 FetchContent_Declare(
   imgui
@@ -49,6 +27,20 @@ FetchContent_Declare(
   GIT_TAG v1.92.5-docking
 )
 FetchContent_MakeAvailable(imgui)
+
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 1.0.3
+)
+FetchContent_MakeAvailable(glm)
+
+FetchContent_Declare(
+  libassimp
+  GIT_REPOSITORY https://github.com/assimp/assimp.git
+  GIT_TAG v6.0.2
+)
+FetchContent_MakeAvailable(libassimp)
 
 add_library(libimgui STATIC)
 
@@ -88,3 +80,29 @@ target_sources(libimgui PRIVATE ${IMGUI_SOURCES})
 target_link_libraries(libimgui PUBLIC SDL3::SDL3 PUBLIC opengl32)
 
 add_subdirectory(glad)
+add_subdirectory(stb)
+
+if(SDL_SHARED)
+  set_target_properties(SDL3-shared PROPERTIES 
+          FOLDER "Deps"
+          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
+else()
+  set_target_properties(SDL3-static PROPERTIES 
+          FOLDER "Deps"
+          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
+endif()
+
+set_target_properties(flecs PROPERTIES 
+  FOLDER "Deps"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>"
+)
+
+set_target_properties(fmt PROPERTIES 
+  FOLDER "Deps"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>"
+)
+
+set_target_properties(assimp PROPERTIES 
+  FOLDER "Deps"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>"
+)

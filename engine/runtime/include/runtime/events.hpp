@@ -97,18 +97,18 @@ public:
 
   template<typename EventCollection>
   void trigger(const EventCollection& events) {
-    // TODO
+    /// TODO:
     using event_type = typename EventCollection::value_type;
   }
 
   template<typename Iterator>
   void trigger(Iterator first, Iterator last) {
-    // TODO
+    /// TODO:
   }
 
   template<typename EventType>
   auto view() /* -> Viewer<EventType> */ {
-    // TODO
+    /// TODO:
   }
 
   template<typename EventType>

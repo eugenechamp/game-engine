@@ -7,6 +7,7 @@
 #include "runtime/batcher.hpp"
 
 #include <SDL3/SDL.h>
+#include <glad/glad.h>
 
 void App::init_subsystem(Subsystem *subsystem) {
   // should I actually be doing this? maybe initialize it right away after the constructor call
@@ -19,7 +20,7 @@ App::App() {
   
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
   {
-    printf("Error: SDL_Init(): %s\n", SDL_GetError());
+    log_fatal("Error: SDL_Init(): {}", SDL_GetError());
   }
 
   // Decide GL+GLSL versions
@@ -50,13 +51,14 @@ App::App() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
 
   // Create window_.handle with graphics context
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
   float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
   SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
@@ -71,7 +73,12 @@ App::App() {
 
   if (gl_context == nullptr)
   {
-    printf("Error: SDL_GL_CreateContext(): %s\n", SDL_GetError());
+    log_fatal("SDL_GL_CreateContext(): {}", SDL_GetError());
+  }
+
+  if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+  {
+    log_fatal("Couldn't load OpenGL");
   }
 
   SDL_GL_MakeCurrent(window_->handle, gl_context);
@@ -80,7 +87,6 @@ App::App() {
   SDL_ShowWindow(window_->handle);
 
   events()
-    .add_event<SDL_KeyboardEvent>()
     .add_event<SDL_KeyboardEvent>()
     .add_event<SDL_MouseMotionEvent>()
     .add_event<SDL_MouseButtonEvent>()
@@ -95,7 +101,8 @@ App::App() {
     .height = 480,
     .handle = SDL_CreateWindow("App", 640, 480, {}),
     .title  = "MyGame"
-  };*/
+  };
+  */
 }
 
 App::~App() {
@@ -119,7 +126,8 @@ void App::run() {
     float dt = delta / 1000.f * 1000.f ;
     
    /* SDL_Event events[255];
-    SDL_PeepEvents(events, 255, SDL_EventAction::SDL_PEEKEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST);*/
+    SDL_PeepEvents(events, 255, SDL_EventAction::SDL_PEEKEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST);
+    */
       
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -211,7 +219,7 @@ void App::run() {
                            //  break;
       };
     }
-
+     
     for (auto& [key, subsystem] : subsystems_)
     {
       if (subsystem->run_condition(*this))
@@ -221,6 +229,8 @@ void App::run() {
     }
 
     events_->run();
+    
+    SDL_GL_SwapWindow(window_->handle);
   }
 }
 
