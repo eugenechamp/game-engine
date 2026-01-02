@@ -4,6 +4,7 @@ bin/
 bin-int/
 build/
 .vscode/
+.tmp/
 
 # Ignore CLion project directory and iml files
 .idea/
