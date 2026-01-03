@@ -50,8 +50,8 @@ App::App() {
   const char* glsl_version = "#version 130";
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 #endif
 
   // Create window_.handle with graphics context
@@ -68,7 +68,6 @@ App::App() {
     .handle = SDL_CreateWindow("App", 1280, 720, window_flags),
     .title = "MyGame"
   });
-
   SDL_GLContext gl_context = SDL_GL_CreateContext(window_->handle);
 
   if (gl_context == nullptr)
@@ -81,8 +80,10 @@ App::App() {
     log_fatal("Couldn't load OpenGL");
   }
 
+  //SDL_GL_SetSwapInterval(1);
+
   SDL_GL_MakeCurrent(window_->handle, gl_context);
-  SDL_GL_SetSwapInterval(1); // Enable vsync
+  //SDL_GL_SetSwapInterval(0); // Enable vsync
   SDL_SetWindowPosition(window_->handle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   SDL_ShowWindow(window_->handle);
 
@@ -115,19 +116,19 @@ App::App(CmdlineArgs args)
 
 void App::run() {
   bool quit = false;
-  u64 last_time = SDL_GetTicksNS();
+  auto last_time = std::chrono::steady_clock::now();
+  
   while(!quit)
   {
+    glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
     commands_->execute();
 
-    u64 now = SDL_GetTicksNS();
-    u64 delta = now - last_time;
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<double> delta = now - last_time;
     last_time = now;
-    float dt = delta / 1000.f * 1000.f ;
-    
-   /* SDL_Event events[255];
-    SDL_PeepEvents(events, 255, SDL_EventAction::SDL_PEEKEVENT, SDL_EVENT_FIRST, SDL_EVENT_LAST);
-    */
+    float dt = static_cast<float>(delta.count());
       
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -136,14 +137,14 @@ void App::run() {
       {
       case SDL_EVENT_QUIT: {
         events().batch<SDL_QuitEvent>().push_back(event.quit);
+        quit = true;
       } break;
       case SDL_EVENT_MOUSE_MOTION: {
         events().batch<SDL_MouseMotionEvent>().push_back(event.motion);
       }break;
-                                 //case SDL_EVENT_MOUSE_WHEEL:
-                                 //{
-                                 //  events().batch<SDL_MouseWheelEvent>().push_back(event.wheel);
-                                 //}break;
+      case SDL_EVENT_MOUSE_WHEEL: {
+        //events().batch<SDL_MouseWheelEvent>().push_back(event.wheel);
+      }break;
       case SDL_EVENT_MOUSE_BUTTON_DOWN:
       case SDL_EVENT_MOUSE_BUTTON_UP: {
         events().batch<SDL_MouseButtonEvent>().push_back(event.button);
@@ -156,67 +157,67 @@ void App::run() {
         events().batch<SDL_KeyboardEvent>().push_back(event.key);
       } break;
               
-                           //case SDL_EVENT_DISPLAY_ORIENTATION:
-                           //case SDL_EVENT_DISPLAY_ADDED:
-                           //case SDL_EVENT_DISPLAY_REMOVED:
-                           //case SDL_EVENT_DISPLAY_MOVED:
-                           //case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
-                           //{
-                           //  bd->WantUpdateMonitors = true;
-                           //  return true;
-                           //}
-                           //case SDL_EVENT_WINDOW_MOUSE_ENTER:
-                           //{
-                           //  if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
-                           //    return false;
-                           //  bd->MouseWindowID = event->window.windowID;
-                           //  bd->MousePendingLeaveFrame = 0;
-                           //  return true;
-                           //}
-                           //// - In some cases, when detaching a window from main viewport SDL may send SDL_WINDOWEVENT_ENTER one frame too late,
-                           ////   causing SDL_WINDOWEVENT_LEAVE on previous frame to interrupt drag operation by clear mouse position. This is why
-                           ////   we delay process the SDL_WINDOWEVENT_LEAVE events by one frame. See issue #5012 for details.
-                           //// FIXME: Unconfirmed whether this is still needed with SDL3.
-                           //case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-                           //{
-                           //  if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
-                           //    return false;
-                           //  bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
-                           //  return true;
-                           //}
-                           //case SDL_EVENT_WINDOW_FOCUS_GAINED:
-                           //case SDL_EVENT_WINDOW_FOCUS_LOST:
-                           //{
-                           //  ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
-                           //  if (viewport == nullptr)
-                           //    return false;
-                           //  //IMGUI_DEBUG_LOG("%s: windowId %d, viewport: %08X\n", (event->type == SDL_EVENT_WINDOW_FOCUS_GAINED) ? "SDL_EVENT_WINDOW_FOCUS_GAINED" : "SDL_WINDOWEVENT_FOCUS_LOST", event->window.windowID, viewport ? viewport->ID : 0);
-                           //  io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
-                           //  return true;
-                           //}
-                           //case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-                           //case SDL_EVENT_WINDOW_MOVED:
-                           //case SDL_EVENT_WINDOW_RESIZED:
-                           //{
-                           //  ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
-                           //  if (viewport == NULL)
-                           //    return false;
-                           //  if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-                           //    viewport->PlatformRequestClose = true;
-                           //  if (event->type == SDL_EVENT_WINDOW_MOVED)
-                           //    viewport->PlatformRequestMove = true;
-                           //  if (event->type == SDL_EVENT_WINDOW_RESIZED)
-                           //    viewport->PlatformRequestResize = true;
-                           //  return true;
-                           //}
-                           //case SDL_EVENT_GAMEPAD_ADDED:
-                           //case SDL_EVENT_GAMEPAD_REMOVED:
-                           //{
-                           //  bd->WantUpdateGamepadsList = true;
-                           //  return true;
-                           //}
-                           //default:
-                           //  break;
+      //case SDL_EVENT_DISPLAY_ORIENTATION:
+      //case SDL_EVENT_DISPLAY_ADDED:
+      //case SDL_EVENT_DISPLAY_REMOVED:
+      //case SDL_EVENT_DISPLAY_MOVED:
+      //case SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED:
+      //{
+      //  bd->WantUpdateMonitors = true;
+      //  return true;
+      //}
+      //case SDL_EVENT_WINDOW_MOUSE_ENTER:
+      //{
+      //  if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
+      //    return false;
+      //  bd->MouseWindowID = event->window.windowID;
+      //  bd->MousePendingLeaveFrame = 0;
+      //  return true;
+      //}
+      //// - In some cases, when detaching a window from main viewport SDL may send SDL_WINDOWEVENT_ENTER one frame too late,
+      ////   causing SDL_WINDOWEVENT_LEAVE on previous frame to interrupt drag operation by clear mouse position. This is why
+      ////   we delay process the SDL_WINDOWEVENT_LEAVE events by one frame. See issue #5012 for details.
+      //// FIXME: Unconfirmed whether this is still needed with SDL3.
+      //case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+      //{
+      //  if (ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID) == nullptr)
+      //    return false;
+      //  bd->MousePendingLeaveFrame = ImGui::GetFrameCount() + 1;
+      //  return true;
+      //}
+      //case SDL_EVENT_WINDOW_FOCUS_GAINED:
+      //case SDL_EVENT_WINDOW_FOCUS_LOST:
+      //{
+      //  ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
+      //  if (viewport == nullptr)
+      //    return false;
+      //  //IMGUI_DEBUG_LOG("%s: windowId %d, viewport: %08X\n", (event->type == SDL_EVENT_WINDOW_FOCUS_GAINED) ? "SDL_EVENT_WINDOW_FOCUS_GAINED" : "SDL_WINDOWEVENT_FOCUS_LOST", event->window.windowID, viewport ? viewport->ID : 0);
+      //  io.AddFocusEvent(event->type == SDL_EVENT_WINDOW_FOCUS_GAINED);
+      //  return true;
+      //}
+      //case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+      //case SDL_EVENT_WINDOW_MOVED:
+      //case SDL_EVENT_WINDOW_RESIZED:
+      //{
+      //  ImGuiViewport* viewport = ImGui_ImplSDL3_GetViewportForWindowID(event->window.windowID);
+      //  if (viewport == NULL)
+      //    return false;
+      //  if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+      //    viewport->PlatformRequestClose = true;
+      //  if (event->type == SDL_EVENT_WINDOW_MOVED)
+      //    viewport->PlatformRequestMove = true;
+      //  if (event->type == SDL_EVENT_WINDOW_RESIZED)
+      //    viewport->PlatformRequestResize = true;
+      //  return true;
+      //}
+      //case SDL_EVENT_GAMEPAD_ADDED:
+      //case SDL_EVENT_GAMEPAD_REMOVED:
+      //{
+      //  bd->WantUpdateGamepadsList = true;
+      //  return true;
+      //}
+      //default:
+      //  break;
       };
     }
      

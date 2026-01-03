@@ -193,10 +193,10 @@ class ImguiEditor : public Subsystem {
   }
 
   void update(float dt) override {
-    auto batcher = app_->events().batch<TestEvent>();
-    for (size_t i{}; i < 10'000; i++) {
-      batcher.push_back(TestEvent{ .num = u32(i + i) });
-    }
+    //auto batcher = app_->events().batch<TestEvent>();
+    //for (size_t i{}; i < 10'000; i++) {
+    //  batcher.push_back(TestEvent{ .num = u32(i + i) });
+    //}
     
     ImGuiIO& io = ImGui::GetIO();
 
@@ -235,6 +235,11 @@ class ImguiEditor : public Subsystem {
       ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
       ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
       ImGui::Checkbox("Another Window", &show_another_window);
+      
+      if (ImGui::Checkbox("VSync", &vsynced))
+      {
+        SDL_GL_SetSwapInterval(vsynced);
+      }
 
       ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
       ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -336,6 +341,8 @@ class ImguiEditor : public Subsystem {
     ImGui::DestroyContext();
   }
   
+
+
   bool run_condition(App&) override
   {
     return true;
@@ -349,10 +356,10 @@ private:
   SDL_Window* window{};
   bool show_demo_window = true;
   bool show_another_window = false;
+  bool vsynced = true;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
   App* app_;
 };
-
 
 class HelloTriangle : public Subsystem {
   using Subsystem::Subsystem;
@@ -458,6 +465,87 @@ private:
   u32 shader{};
 };
 
+#include <rendering/shader.hpp>
+#include <rendering/model.hpp>
+#include <runtime/camera.hpp>
+
+class ModelPreview : public Subsystem {
+  Subsystem::Subsystem;
+  void init(App& app) override {
+    app.events()
+      .listen(&ModelPreview::on_keyboard_event, this);
+    
+    glCreateBuffers(1, &uniform_buffer);
+    glNamedBufferData(uniform_buffer, static_cast<uint32_t>(sizeof(view_info)), nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0u, uniform_buffer);
+    
+    glEnable(GL_DEPTH_TEST);
+    
+    log_info("current working directory: {}", std::filesystem::current_path().string());
+
+    shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
+    model.load("../../sandbox/assets/models/ak-47/scene.gltf");
+    camera.perspective(45.f, app.main_window().width / (float)app.main_window().height, 0.1f, 1000.f);
+  }
+
+  void update(float dt) override
+  {
+    static float angle_accum{ 0.f };
+    camera.position(camera.position() * dt);
+    view_info vi{ camera.projection(), camera.view() };
+    glNamedBufferSubData(uniform_buffer, 0, sizeof(view_info), &vi);
+
+    shader.bind();
+    glm::mat4 model_mat(1.f);
+
+    angle_accum += 1.f * dt;
+
+    model_mat = glm::translate(model_mat, { 0.f, 0.f, -10.f });
+    model_mat = glm::rotate(model_mat, angle_accum, { 0.f, 1.f, 0.f });
+
+    shader.mat4("model", model_mat);
+    shader.mat3("normal_mat", glm::transpose(glm::inverse(model_mat)));
+    shader.vec3("light_dir", glm::vec3(0.f, 5.f, -7.f));
+
+    model.draw(shader);
+  }
+  
+
+  void on_keyboard_event(Span<const SDL_KeyboardEvent> events) {
+    auto& event = events.front();
+    /// FIX: why is movement so jittery?
+    switch (event.type) {
+      case SDL_EVENT_KEY_DOWN: {
+        switch (event.scancode) {
+          case SDL_SCANCODE_W: {
+            camera.position(camera.position() + (camera.front() * 100.f));
+          }break;
+          case SDL_SCANCODE_A: {
+            camera.position(camera.position() - (camera.right() * 100.f ));
+          } break;
+          case SDL_SCANCODE_S: {
+            camera.position(camera.position() - (camera.front() * 100.f ));
+          } break;
+          case SDL_SCANCODE_D: {
+            camera.position(camera.position() + (camera.right() * 100.f ));
+          } break;
+        };
+      }break;
+    }
+  }
+
+  void shutdown(App&) override
+  {
+
+  }
+
+private:
+  Shader shader;
+  Model model;
+  FreeCamera camera;
+  u32 uniform_buffer{};
+};
+
 enum class FramePhase {
   Startup,
   PreUpdate,
@@ -467,9 +555,8 @@ enum class FramePhase {
 
 auto main() -> int {
   auto app = App();
-  app.add_subsystem<HelloTriangle>();
+  app.add_subsystem<ModelPreview>();
   app.add_subsystem<ImguiEditor>();
-  
   app.run();
 }
 
