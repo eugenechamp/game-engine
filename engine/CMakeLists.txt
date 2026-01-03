@@ -17,13 +17,17 @@ set(HEADERS
   runtime/include/runtime/type_traits.hpp
 
   runtime/include/runtime/log.hpp
-
+#temps
   runtime/include/runtime/camera.hpp
   rendering/mesh.hpp
   rendering/model.hpp
   rendering/shader.hpp
   rendering/gfx.hpp
   io.hpp 
+  runtime/include/runtime/file_watcher.hpp
+  runtime/include/runtime/handle.hpp
+  runtime/include/runtime/assets.hpp
+  runtime/include/runtime/loader.hpp
 )
 
 set(SOURCES
@@ -31,12 +35,15 @@ set(SOURCES
   "runtime/src/subsystem.cpp"
   "runtime/src/commands.cpp"
   "runtime/src/events.cpp"
-
+  
+  # temps
   rendering/mesh.cpp
   rendering/model.cpp
   rendering/shader.cpp
   rendering/gfx.cpp
   io.cpp 
+  runtime/src/file_watcher.cpp
+  
 )
 
 target_sources(engine-runtime PRIVATE ${SOURCES} ${HEADERS})

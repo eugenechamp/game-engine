@@ -5,6 +5,20 @@
 #include <runtime/window.hpp>
 #include <backends/imgui_impl_sdl3.h>
 #include <glad/glad.h>
+#include <runtime/assets.hpp>
+
+#include <rendering/shader.hpp>
+#include <rendering/model.hpp>
+#include <runtime/camera.hpp>
+
+template<>
+struct Loader<Shader> {
+  Shader load(const LoadContext& ctx) {
+    Shader shader;
+    shader.load(ctx.paths[0], ctx.paths[1]);
+    return shader;
+  }
+};
 
 enum class AppState {
   Startup,
@@ -465,13 +479,14 @@ private:
   u32 shader{};
 };
 
-#include <rendering/shader.hpp>
-#include <rendering/model.hpp>
-#include <runtime/camera.hpp>
+
 
 class ModelPreview : public Subsystem {
   Subsystem::Subsystem;
   void init(App& app) override {
+    shaders = &app.assets<Shader>();
+    //shaders = &app.assets<Shader>();
+    
     app.events()
       .listen(&ModelPreview::on_keyboard_event, this);
     
@@ -483,7 +498,9 @@ class ModelPreview : public Subsystem {
     
     log_info("current working directory: {}", std::filesystem::current_path().string());
 
-    shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
+    //shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
+    shader_handle = shaders->load("Surface_Shader", "../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
+
     model.load("../../sandbox/assets/models/ak-47/scene.gltf");
     camera.perspective(45.f, app.main_window().width / (float)app.main_window().height, 0.1f, 1000.f);
   }
@@ -494,6 +511,8 @@ class ModelPreview : public Subsystem {
     camera.position(camera.position() * dt);
     view_info vi{ camera.projection(), camera.view() };
     glNamedBufferSubData(uniform_buffer, 0, sizeof(view_info), &vi);
+    
+    Shader& shader = shaders->get(shader_handle);
 
     shader.bind();
     glm::mat4 model_mat(1.f);
@@ -540,10 +559,11 @@ class ModelPreview : public Subsystem {
   }
 
 private:
-  Shader shader;
+  Handle<Shader> shader_handle;
   Model model;
   FreeCamera camera;
   u32 uniform_buffer{};
+  AssetCache<Shader>* shaders = nullptr;
 };
 
 enum class FramePhase {
@@ -555,6 +575,12 @@ enum class FramePhase {
 
 auto main() -> int {
   auto app = App();
+  
+  app.add_resource<AssetCache<Model>>();
+  app.add_resource<AssetCache<Shader>>();
+  
+  //auto a = new AssetCache<Model>();
+
   app.add_subsystem<ModelPreview>();
   app.add_subsystem<ImguiEditor>();
   app.run();

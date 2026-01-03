@@ -30,6 +30,14 @@ public:
     
     return *this;
   }
+
+  template<typename Res>
+  auto add_resource() -> App& {
+    constexpr auto sid = core::type_sid<Res>();
+    res_.emplace(std::pair{ sid, std::make_unique<ResourceStorage<Res>>() });
+
+    return *this;
+  }
   
   template<typename /*std::derived_from<Subsystem>*/ SubsystemType>
   auto add_subsystem() -> App& {
@@ -55,7 +63,7 @@ public:
   template<typename Res>
   auto get() -> Res& {
     constexpr auto sid = core::type_sid<Res>();
-    Res* res = static_cast<ResourceStorage<Res>*>(res_.at(sid).get())->resource;
+    Res* res = &static_cast<ResourceStorage<Res>*>(res_.at(sid).get())->resource;
     return *res;
   }
 

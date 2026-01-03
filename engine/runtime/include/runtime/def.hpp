@@ -11,6 +11,12 @@
 #include <cstdint>
 
 #include "log.hpp"
+namespace std {
+  namespace filesystem {
+
+  }
+  namespace fs = std::filesystem;
+}
 
 using i8 = int8_t;
 using u8 = int8_t;

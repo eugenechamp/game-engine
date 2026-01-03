@@ -13,6 +13,10 @@ public:
     : type_{  }
   { }
 
+  static constexpr auto from_string(std::string_view str) -> StringID {
+    return {};
+  }
+
   constexpr StringID(const StringID&)                    = default;
   constexpr StringID(StringID&&)                         = default;
   constexpr auto operator=(const StringID&) -> StringID& = default;
@@ -31,3 +35,5 @@ public:
 private:
   Type type_;
 };
+
+#define SID(str) StringID::from_string(str).id()

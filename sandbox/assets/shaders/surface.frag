@@ -26,5 +26,5 @@ void main()
 
   vec4 lit = vec4(vec3(ambient + diffuse).rgb, 1.0);
   
-  FragColor = lit * texture(albedo, o_uv);
+  FragColor = lit * texture(albedo, o_uv);// * vec4(0.2, 0.8, 0.9, 0.9);
 }

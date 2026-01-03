@@ -5,6 +5,7 @@
 #include "runtime/subsystem.hpp"
 #include "runtime/window.hpp"
 #include "runtime/batcher.hpp"
+#include "runtime/file_watcher.hpp"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -123,6 +124,8 @@ void App::run() {
     glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    FileWatcher::run();
+
     commands_->execute();
 
     auto now = std::chrono::steady_clock::now();
