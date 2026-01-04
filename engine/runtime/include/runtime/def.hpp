@@ -9,11 +9,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <glm/fwd.hpp>
 
 #include "log.hpp"
 namespace std {
   namespace filesystem {
-
   }
   namespace fs = std::filesystem;
 }
@@ -67,6 +67,24 @@ using f64 = double;
   #error "FORCE_INLINE redefinition" 
 #endif
 
+using glm::vec2;
+using glm::vec3;
+using glm::vec4;
+using glm::mat2;
+using glm::mat3;
+using glm::mat4;
+using glm::quat;
+
+using au8  = std::atomic<u8>;
+using au16 = std::atomic<u16>;
+using au32 = std::atomic<u32>;
+using au64 = std::atomic<u64>;
+
+using ai8  = std::atomic<u8>;
+using ai16 = std::atomic<u16>;
+using ai32 = std::atomic<u32>;
+using ai64 = std::atomic<u64>;
+
 template<typename T, typename A = std::allocator<T>>
 using Vec = std::vector<T, A>;
 
@@ -87,3 +105,7 @@ using Fn = std::function<F>;
 
 template<typename T>
 using Span = std::span<T>;
+
+template<typename T>
+using Viewer = Span<const T>;
+

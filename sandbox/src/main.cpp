@@ -124,19 +124,18 @@ struct TestBatchEvent {
 
 void on_test_event(Span<const TestEvent> events, Batcher<TestBatchEvent> batch_events) {
   //log_info("TestEvent called size: {}", events.size());
-  
-  for(u32 i = 0; auto& event : events)
+  /*for(u32 i = 0; auto& event : events)
   {
     batch_events.push_back(TestBatchEvent{ .num = event.num });
-  }
+  }*/
 }
 
 void on_test_batch_event(Span<const TestBatchEvent> events) {
   //log_info("TestBatchEvent called size: {}", events.size());
-  for (u32 i = 0; auto& event : events)
-  {
-    //log_info("TestBatchEvent N{}: value: {}", ++i, event.num);
-  }
+  //for (u32 i = 0; auto& event : events)
+  //{
+  //  //log_info("TestBatchEvent N{}: value: {}", ++i, event.num);
+  //}
 }
 
 class ImguiEditor : public Subsystem {
@@ -207,10 +206,10 @@ class ImguiEditor : public Subsystem {
   }
 
   void update(float dt) override {
-    //auto batcher = app_->events().batch<TestEvent>();
-    //for (size_t i{}; i < 10'000; i++) {
-    //  batcher.push_back(TestEvent{ .num = u32(i + i) });
-    //}
+    auto batcher = app_->events().batch<TestEvent>();
+   /* for (size_t i{}; i < 100'000; i++) {
+      batcher.push_back(TestEvent{ .num = u32(i + i) });
+    }*/
     
     ImGuiIO& io = ImGui::GetIO();
 
@@ -290,7 +289,7 @@ class ImguiEditor : public Subsystem {
   #endif
   }
   
-  void on_mouse_motion(Span<const SDL_MouseMotionEvent> events) {
+  void on_mouse_motion(Viewer<SDL_MouseMotionEvent> events) {
     auto& event = events.front();
     auto& io = ImGui::GetIO();
     if (ImGui::FindViewportByPlatformHandle((void*)(intptr_t)event.windowID) == nullptr)
@@ -307,7 +306,7 @@ class ImguiEditor : public Subsystem {
     io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
   }
   
-  void on_mouse_button(Span<const SDL_MouseButtonEvent> events) {
+  void on_mouse_button(Viewer<SDL_MouseButtonEvent> events) {
     auto& event = events.front();
     auto& io = ImGui::GetIO();
     auto* bd = ImGui::GetCurrentContext() ? (struct ImGui_ImplSDL3_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;;
@@ -485,7 +484,6 @@ class ModelPreview : public Subsystem {
   Subsystem::Subsystem;
   void init(App& app) override {
     shaders = &app.assets<Shader>();
-    //shaders = &app.assets<Shader>();
     
     app.events()
       .listen(&ModelPreview::on_keyboard_event, this);
@@ -497,7 +495,7 @@ class ModelPreview : public Subsystem {
     glEnable(GL_DEPTH_TEST);
     
     log_info("current working directory: {}", std::filesystem::current_path().string());
-
+    
     //shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
     shader_handle = shaders->load("Surface_Shader", "../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
 
@@ -508,15 +506,17 @@ class ModelPreview : public Subsystem {
   void update(float dt) override
   {
     static float angle_accum{ 0.f };
-    camera.position(camera.position() * dt);
+    
+    camera.position(camera.position() + (camera_velocity * dt));
+
     view_info vi{ camera.projection(), camera.view() };
     glNamedBufferSubData(uniform_buffer, 0, sizeof(view_info), &vi);
     
     Shader& shader = shaders->get(shader_handle);
 
     shader.bind();
-    glm::mat4 model_mat(1.f);
-
+    mat4 model_mat(1.f);
+    
     angle_accum += 1.f * dt;
 
     model_mat = glm::translate(model_mat, { 0.f, 0.f, -10.f });
@@ -524,37 +524,49 @@ class ModelPreview : public Subsystem {
 
     shader.mat4("model", model_mat);
     shader.mat3("normal_mat", glm::transpose(glm::inverse(model_mat)));
-    shader.vec3("light_dir", glm::vec3(0.f, 5.f, -7.f));
-
+    shader.vec3("light_dir", vec3(0.f, 5.f, -7.f));
     model.draw(shader);
   }
   
 
   void on_keyboard_event(Span<const SDL_KeyboardEvent> events) {
     auto& event = events.front();
-    /// FIX: why is movement so jittery?
+    
     switch (event.type) {
       case SDL_EVENT_KEY_DOWN: {
         switch (event.scancode) {
           case SDL_SCANCODE_W: {
-            camera.position(camera.position() + (camera.front() * 100.f));
+            camera_velocity = vec3(0.f, 0.f, -camera_speed);
+            //camera.position(camera.position() + (camera.front() * 100.f));
           }break;
           case SDL_SCANCODE_A: {
-            camera.position(camera.position() - (camera.right() * 100.f ));
+            camera_velocity = vec3(-camera_speed, 0.f, 0.f);
+            //camera.position(camera.position() - (camera.right() * 100.f ));
           } break;
           case SDL_SCANCODE_S: {
-            camera.position(camera.position() - (camera.front() * 100.f ));
+            camera_velocity = vec3(0.f, 0.f, camera_speed);
+            // camera.position(camera.position() - (camera.front() * 100.f ));
           } break;
           case SDL_SCANCODE_D: {
-            camera.position(camera.position() + (camera.right() * 100.f ));
+            camera_velocity = vec3(camera_speed, 0.f, 0.f);
+            //camera.position(camera.position() + (camera.right() * 100.f ));
           } break;
+        };
+      } break;
+      case SDL_EVENT_KEY_UP: {
+        switch (event.scancode) {
+        case SDL_SCANCODE_W: 
+        case SDL_SCANCODE_A: 
+        case SDL_SCANCODE_S: 
+        case SDL_SCANCODE_D: {
+          camera_velocity = vec3();
+        }break;
         };
       }break;
     }
   }
 
-  void shutdown(App&) override
-  {
+  void shutdown(App&) override {
 
   }
 
@@ -562,6 +574,8 @@ private:
   Handle<Shader> shader_handle;
   Model model;
   FreeCamera camera;
+  vec3 camera_velocity = vec3();
+  float camera_speed = 10.f;
   u32 uniform_buffer{};
   AssetCache<Shader>* shaders = nullptr;
 };

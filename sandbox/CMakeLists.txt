@@ -30,15 +30,19 @@ PUBLIC
   <memory>
   <span>
   <set>
-  <cstring>
   <source_location>
   <fmt/core.h>
   <unordered_map>
   <map>
   <functional>
-  <string_view>
+  <cstring>
   <string>
+  <string_view>
   <type_traits>
   <cstdint>
   <cstddef>
+  <glm/glm.hpp>
+  <thread>
+  <mutex>
+  <atomic>
 )

@@ -76,12 +76,12 @@ public:
     return *this;
   }
 
-  template<typename Instance, typename EventType, typename... Args>
-  auto listen(void(Instance::*handler)(Span<const EventType>, Args...), Instance* instance) -> Events& {
+  template<typename Instance, typename EventType, typename... Res>
+  auto listen(void(Instance::*handler)(Span<const EventType>, Res...), Instance* instance) -> Events& {
 
     auto wrapper = [handler, instance](const void* events) {
       Vec<EventType>& e = ((EventStorage<EventType>*)events)->read_buff_;
-      (instance->*handler)(Span<const EventType>(e), get_resource<Args>()...);
+      (instance->*handler)(Span<const EventType>(e), get_resource<Res>()...);
       //handler(Span<const EventType>(e));
     };
     events_.at(core::type_sid<EventType>()).handlers.push_back(std::move(wrapper));

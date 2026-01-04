@@ -66,6 +66,10 @@ public:
     Res* res = &static_cast<ResourceStorage<Res>*>(res_.at(sid).get())->resource;
     return *res;
   }
+  
+  auto commands() -> Commands& {
+    return *commands_;
+  }
 
   auto events() -> Events& {
     return *events_;

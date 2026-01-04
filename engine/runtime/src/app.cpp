@@ -81,10 +81,7 @@ App::App() {
     log_fatal("Couldn't load OpenGL");
   }
 
-  //SDL_GL_SetSwapInterval(1);
-
   SDL_GL_MakeCurrent(window_->handle, gl_context);
-  //SDL_GL_SetSwapInterval(0); // Enable vsync
   SDL_SetWindowPosition(window_->handle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   SDL_ShowWindow(window_->handle);
 
@@ -95,6 +92,8 @@ App::App() {
     .add_event<SDL_QuitEvent>()
     .add_event<SDL_TextInputEvent>();
   
+  FileWatcher::run(*this);
+
   /*
   SDL_Init(SDL_INIT_VIDEO);
   
@@ -124,8 +123,6 @@ void App::run() {
     glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    FileWatcher::run();
-
     commands_->execute();
 
     auto now = std::chrono::steady_clock::now();
@@ -238,7 +235,6 @@ void App::run() {
   }
 }
 
-void App::SubsystemDeleter::operator()(Subsystem *subsystem) const
-{
+void App::SubsystemDeleter::operator()(Subsystem *subsystem) const {
   delete subsystem;
 }
