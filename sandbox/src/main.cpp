@@ -10,6 +10,7 @@
 #include <rendering/shader.hpp>
 #include <rendering/model.hpp>
 #include <runtime/camera.hpp>
+#include <runtime/input.hpp>
 
 template<>
 struct Loader<Shader> {
@@ -486,7 +487,7 @@ class ModelPreview : public Subsystem {
     shaders = &app.assets<Shader>();
     
     app.events()
-      .listen(&ModelPreview::on_keyboard_event, this);
+      .listen(&ModelPreview::on_camera_mouse_move, this);
     
     glCreateBuffers(1, &uniform_buffer);
     glNamedBufferData(uniform_buffer, static_cast<uint32_t>(sizeof(view_info)), nullptr, GL_DYNAMIC_DRAW);
@@ -503,8 +504,49 @@ class ModelPreview : public Subsystem {
     camera.perspective(45.f, app.main_window().width / (float)app.main_window().height, 0.1f, 1000.f);
   }
 
+  void on_camera_mouse_move(Viewer<SDL_MouseMotionEvent> events) {
+    for (auto& event : events)
+    {
+      static float sensitivity = 0.2f;
+
+      float x = event.x;
+      float y = event.y;
+
+      static float last_x = static_cast<float>(x);
+      static float last_y = static_cast<float>(y);
+
+      float xoffset = static_cast<float>(x - last_x);
+      float yoffset = static_cast<float>(last_y - y);
+
+      last_x = static_cast<float>(x);
+      last_y = static_cast<float>(y);
+
+      /*if (!camera_fly_)
+        return;*/
+
+      vec3 rotation = camera.rotation();
+
+      rotation.x += xoffset * sensitivity;
+      rotation.y += yoffset * sensitivity;
+
+      if (rotation.y > 89.0f)
+      {
+        rotation.y = 89.0f;
+      }
+      if (rotation.y < -89.0f)
+      {
+        rotation.y = -89.0f;
+      }
+
+      camera.rotation(rotation);
+    }
+  }
+
+
   void update(float dt) override
   {
+    process_input();
+    
     static float angle_accum{ 0.f };
     
     camera.position(camera.position() + (camera_velocity * dt));
@@ -528,41 +570,31 @@ class ModelPreview : public Subsystem {
     model.draw(shader);
   }
   
-
-  void on_keyboard_event(Span<const SDL_KeyboardEvent> events) {
-    auto& event = events.front();
+  void process_input() {
+    float sprint_speed_multiplier = 1.4f;
     
-    switch (event.type) {
-      case SDL_EVENT_KEY_DOWN: {
-        switch (event.scancode) {
-          case SDL_SCANCODE_W: {
-            camera_velocity = vec3(0.f, 0.f, -camera_speed);
-            //camera.position(camera.position() + (camera.front() * 100.f));
-          }break;
-          case SDL_SCANCODE_A: {
-            camera_velocity = vec3(-camera_speed, 0.f, 0.f);
-            //camera.position(camera.position() - (camera.right() * 100.f ));
-          } break;
-          case SDL_SCANCODE_S: {
-            camera_velocity = vec3(0.f, 0.f, camera_speed);
-            // camera.position(camera.position() - (camera.front() * 100.f ));
-          } break;
-          case SDL_SCANCODE_D: {
-            camera_velocity = vec3(camera_speed, 0.f, 0.f);
-            //camera.position(camera.position() + (camera.right() * 100.f ));
-          } break;
-        };
-      } break;
-      case SDL_EVENT_KEY_UP: {
-        switch (event.scancode) {
-        case SDL_SCANCODE_W: 
-        case SDL_SCANCODE_A: 
-        case SDL_SCANCODE_S: 
-        case SDL_SCANCODE_D: {
-          camera_velocity = vec3();
-        }break;
-        };
-      }break;
+    if (Input::key_just_pressed(KeyCode::F))
+    {
+      log_info("F is just pressed...");
+    }
+
+    camera_velocity = vec3();
+    if (Input::key_pressed(KeyCode::W))
+    {
+      camera_velocity = camera.front() * camera_speed;
+    }
+    else if (Input::key_pressed(KeyCode::S))
+    {
+      camera_velocity = camera.front() * -camera_speed;
+    }
+    
+    if (Input::key_pressed(KeyCode::D))
+    {
+      camera_velocity = camera.right() * camera_speed;
+    }
+    else if (Input::key_pressed(KeyCode::A))
+    {
+      camera_velocity = camera.right() * -camera_speed;
     }
   }
 
@@ -589,11 +621,11 @@ enum class FramePhase {
 
 auto main() -> int {
   auto app = App();
-  
+
   app.add_resource<AssetCache<Model>>();
   app.add_resource<AssetCache<Shader>>();
   
-  //auto a = new AssetCache<Model>();
+  // auto a = new AssetCache<Model>();
 
   app.add_subsystem<ModelPreview>();
   app.add_subsystem<ImguiEditor>();

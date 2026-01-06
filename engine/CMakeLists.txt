@@ -28,6 +28,7 @@ set(HEADERS
   runtime/include/runtime/handle.hpp
   runtime/include/runtime/assets.hpp
   runtime/include/runtime/loader.hpp
+  runtime/include/runtime/input.hpp
 )
 
 set(SOURCES
@@ -43,6 +44,7 @@ set(SOURCES
   rendering/gfx.cpp
   io.cpp 
   runtime/src/file_watcher.cpp
+  runtime/src/input.cpp
   
 )
 

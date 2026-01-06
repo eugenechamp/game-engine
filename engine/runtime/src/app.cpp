@@ -6,6 +6,7 @@
 #include "runtime/window.hpp"
 #include "runtime/batcher.hpp"
 #include "runtime/file_watcher.hpp"
+#include "runtime/input.hpp"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -62,7 +63,7 @@ App::App() {
 
   float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
   SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-
+  
   window_ = std::make_unique<Window>(Window{
     .width = 640,
     .height = 480,
@@ -93,6 +94,7 @@ App::App() {
     .add_event<SDL_TextInputEvent>();
   
   FileWatcher::run(*this);
+  Input::init(*this);
 
   /*
   SDL_Init(SDL_INIT_VIDEO);
