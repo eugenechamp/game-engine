@@ -42,7 +42,6 @@ bool Input::key_just_released(KeyCode keycode) {
 }
 
 bool Input::key_released(KeyCode keycode) {
-  u8* key_state = (u8*)SDL_GetKeyboardState(nullptr);
   return !key_state[(SDL_Scancode)keycode];
 }
 

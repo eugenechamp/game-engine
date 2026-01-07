@@ -17,3 +17,21 @@ void Events::run() {
     data.events->clear();
   }
 }
+
+void Events::trigger_impl(void *events, StringID type) {
+  /*
+  auto& event_data = events_.at(type);
+
+  data.events->swap_buffers();
+  if(data.events->is_empty()) {
+    return;
+  }
+  
+  for(auto& handler : data.handlers) 
+  {
+    handler(data.events.get());
+  }
+    
+  data.events->clear();
+  */
+}

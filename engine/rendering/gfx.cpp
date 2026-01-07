@@ -10,8 +10,7 @@
 
 std::unordered_map<std::filesystem::path, uint32_t> texture_cache;
 
-Texture load_texture(const std::filesystem::path& filepath, const TextureType type)
-{
+Texture load_texture(const std::filesystem::path& filepath, const TextureType type) {
   stbi_set_flip_vertically_on_load(false);
   if (auto it = texture_cache.find(filepath); it != texture_cache.end())
   {
@@ -62,14 +61,12 @@ Texture load_texture(const std::filesystem::path& filepath, const TextureType ty
   return texture;
 }
 
-Texture texture_from_image(const Image& image)
-{
+Texture texture_from_image(const Image& image) {
   // TODO: implement the function
   return Texture();
 }
 
-Image load_image(const std::filesystem::path &filepath)
-{
+Image load_image(const std::filesystem::path &filepath) {
   int width, height, channels;
   uint8_t* data = stbi_load(filepath.string().c_str(), &width, &height, &channels, 0);
   

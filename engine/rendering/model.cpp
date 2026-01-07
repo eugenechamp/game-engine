@@ -120,4 +120,5 @@ Mesh Model::_process_mesh(aiMesh *msh, const aiScene *scene, const std::filesyst
   return Mesh(std::move(vertices), std::move(textures), std::move(indices));
 
 }
+
 Model::~Model() = default;

@@ -382,29 +382,38 @@ enum class Key {
 
 struct Input {
   friend class App;
-  
+  // NOT WORKING
   static bool key_just_pressed(KeyCode);
+  // NOT WORKING
   static bool key_just_released(KeyCode);
+  // KINDA WORKING
   static bool key_pressed(KeyCode);
+  // NOT WORKING?
   static bool key_released(KeyCode);
   
+  // NOT WORKING
   static bool any_key_pressed(Span<KeyCode>);
-
+  // NOT WORKING
   static bool mouse_moved();
-
+  // NOT WORKING
   static auto mouse_position() -> vec2;
+  // NOT WORKING
   static void mouse_position(vec2);
-  
+  // NOT WORKING
   static auto pressed_keycodes() -> Vec<KeyCode>;
+  // NOT WORKING
   static auto pressed_keys() -> Vec<Key>;
-
+  // NOT WORKING
   static auto just_pressed_keys() -> Vec<Key>;
+  // NOT WORKING
   static auto just_pressed_keycodes() -> Vec<KeyCode>;
-
+  // NOT WORKING
   static auto released_keys() -> Vec<Key>;
+  // NOT WORKING
   static auto released_keycodes() -> Vec<KeyCode>;
-  
+  // NOT WORKING
   static auto just_released_keys() -> Vec<Key>;
+  // NOT WORKING
   static auto just_released_keycodes() -> Vec<KeyCode>;
 
 private:

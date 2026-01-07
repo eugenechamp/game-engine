@@ -29,27 +29,12 @@ public:
 
     Unique<EventStorageBase> storage(new EventStorage<EventType>());
 
-    events_.emplace(std::pair{ 
+    events_.emplace(std::pair{
       sid, 
       EventData {.events = std::move(storage) }
     });
     
     return *this;
-  }
-  
-  template<typename Res>
-  static auto get_resource(Events& events) -> Res {
-    using namespace traits::_;
-
-    // using ResourceType = std::remove_reference_t<Res>;
-    if constexpr(is_batcher<Res>::value)
-    {
-      return events.batch<typename Res::element_type>();
-    }
-    else
-    {
-      return events.app_.get<Res>();
-    }
   }
 
   template<typename EventType, typename... Res>
@@ -95,10 +80,17 @@ public:
     return *this;
   }
 
-  template<typename EventCollection>
-  void trigger(const EventCollection& events) {
+  template<typename EventType>
+  void trigger(const EventType& event) {
+    auto events = Span{ event, 1ull };
+    trigger_impl(events, core::type_sid<EventType>());
+  }
+
+  template<typename EventType>
+  void trigger(Viewer<EventType> events) {
     /// TODO:
-    using event_type = typename EventCollection::value_type;
+
+    //using event_type = typename EventCollection::value_type;
   }
 
   template<typename Iterator>
@@ -122,39 +114,56 @@ public:
 
 private:
   void run();
+  
+  void trigger_impl(void* events, StringID type);
 
   template<typename EventType>
   auto secure() {
 
   }
 
+  template<typename Res>
+  static auto get_resource(Events& events) -> Res {
+    using namespace traits::_;
+
+    // using ResourceType = std::remove_reference_t<Res>;
+    if constexpr(is_batcher<Res>::value)
+    {
+      return events.batch<typename Res::element_type>();
+    }
+    else
+    {
+      return events.app_.get<Res>();
+    }
+  }
+
 private:
-   using EventHandlerType = Fn<void(const void*)>;
+  using EventHandlerType = Fn<void(const void*)>;
 
-   struct EventStorageBase {
-     virtual void clear() = 0;
-     virtual bool is_empty() = 0;
-     virtual void swap_buffers() = 0;
-     virtual ~EventStorageBase() = default;
-   };
-  
-   template<typename EventType>
-   struct EventStorage : EventStorageBase {
-     Vec<EventType> write_buff_;
-     Vec<EventType> read_buff_;
+  struct EventStorageBase {
+    virtual void clear() = 0;
+    virtual bool is_empty() = 0;
+    virtual void swap_buffers() = 0;
+    virtual ~EventStorageBase() = default;
+  };
 
-     void clear() override {
-       read_buff_.clear();
-     }
-     
-     bool is_empty() override {
-       return read_buff_.empty();
-     }
+  template<typename EventType>
+  struct EventStorage : EventStorageBase {
+    Vec<EventType> write_buff_;
+    Vec<EventType> read_buff_;
 
-     void swap_buffers() override {
-       std::swap(write_buff_, read_buff_);
-     }
-   };
+    void clear() override {
+      read_buff_.clear();
+    }
+    
+    bool is_empty() override {
+      return read_buff_.empty();
+    }
+
+    void swap_buffers() override {
+      std::swap(write_buff_, read_buff_);
+    }
+  };
 
   //struct EventStorage {
   //  using BufferPlacement = char[sizeof(Vec<char>)];

@@ -14,7 +14,7 @@
 
 template<>
 struct Loader<Shader> {
-  Shader load(const LoadContext& ctx) {
+  auto load(const LoadContext& ctx) -> Shader {
     Shader shader;
     shader.load(ctx.paths[0], ctx.paths[1]);
     return shader;
@@ -150,8 +150,8 @@ class ImguiEditor : public Subsystem {
     
     app.events()
       .add_event<TestEvent>()
-      .listen(on_test_event)
       .add_event<TestBatchEvent>()
+      .listen(on_test_event)
       .listen(on_test_batch_event);
     
     app.events()
@@ -254,6 +254,19 @@ class ImguiEditor : public Subsystem {
       {
         SDL_GL_SetSwapInterval(vsynced);
       }
+      
+      if (ImGui::Checkbox("Wireframe", &wireframe))
+      {
+        if (wireframe)
+        {
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        else
+        {
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+      }
+
 
       ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
       ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -371,6 +384,7 @@ private:
   bool show_demo_window = true;
   bool show_another_window = false;
   bool vsynced = true;
+  bool wireframe = false;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
   App* app_;
 };
@@ -479,15 +493,22 @@ private:
   u32 shader{};
 };
 
-
+struct DbgRenderer {
+  static void draw_line(vec3 start_point, vec3 end_point);
+};
 
 class ModelPreview : public Subsystem {
-  Subsystem::Subsystem;
+  friend App;
+  explicit ModelPreview(App& app)
+    : Subsystem(app), 
+      shaders{ app.assets<Shader>() }
+  { }
+
+private:
   void init(App& app) override {
-    shaders = &app.assets<Shader>();
-    
     app.events()
-      .listen(&ModelPreview::on_camera_mouse_move, this);
+      .listen(&ModelPreview::on_camera_mouse_move, this)
+      .listen(&ModelPreview::on_mouse_button_event, this);
     
     glCreateBuffers(1, &uniform_buffer);
     glNamedBufferData(uniform_buffer, static_cast<uint32_t>(sizeof(view_info)), nullptr, GL_DYNAMIC_DRAW);
@@ -498,10 +519,19 @@ class ModelPreview : public Subsystem {
     log_info("current working directory: {}", std::filesystem::current_path().string());
     
     //shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
-    shader_handle = shaders->load("Surface_Shader", "../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
+    shader_handle = shaders.load("Surface_Shader", "../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
 
     model.load("../../sandbox/assets/models/ak-47/scene.gltf");
     camera.perspective(45.f, app.main_window().width / (float)app.main_window().height, 0.1f, 1000.f);
+  }
+  
+  void on_mouse_button_event(Viewer<SDL_MouseButtonEvent> events) {
+    auto& event = events.front();
+    
+    if (event.button == 3)
+    {
+      camera_fly = !camera_fly;
+    }
   }
 
   void on_camera_mouse_move(Viewer<SDL_MouseMotionEvent> events) {
@@ -521,8 +551,8 @@ class ModelPreview : public Subsystem {
       last_x = static_cast<float>(x);
       last_y = static_cast<float>(y);
 
-      /*if (!camera_fly_)
-        return;*/
+      if (!camera_fly)
+        return;
 
       vec3 rotation = camera.rotation();
 
@@ -542,7 +572,6 @@ class ModelPreview : public Subsystem {
     }
   }
 
-
   void update(float dt) override
   {
     process_input();
@@ -554,7 +583,7 @@ class ModelPreview : public Subsystem {
     view_info vi{ camera.projection(), camera.view() };
     glNamedBufferSubData(uniform_buffer, 0, sizeof(view_info), &vi);
     
-    Shader& shader = shaders->get(shader_handle);
+    Shader& shader = shaders.get(shader_handle);
 
     shader.bind();
     mat4 model_mat(1.f);
@@ -571,6 +600,10 @@ class ModelPreview : public Subsystem {
   }
   
   void process_input() {
+    camera_velocity = vec3();
+    if (!camera_fly)
+      return;
+
     float sprint_speed_multiplier = 1.4f;
     
     if (Input::key_just_pressed(KeyCode::F))
@@ -578,7 +611,6 @@ class ModelPreview : public Subsystem {
       log_info("F is just pressed...");
     }
 
-    camera_velocity = vec3();
     if (Input::key_pressed(KeyCode::W))
     {
       camera_velocity = camera.front() * camera_speed;
@@ -603,13 +635,15 @@ class ModelPreview : public Subsystem {
   }
 
 private:
+  AssetCache<Shader>& shaders;
+  
   Handle<Shader> shader_handle;
   Model model;
   FreeCamera camera;
   vec3 camera_velocity = vec3();
   float camera_speed = 10.f;
   u32 uniform_buffer{};
-  AssetCache<Shader>* shaders = nullptr;
+  bool camera_fly = false;
 };
 
 enum class FramePhase {

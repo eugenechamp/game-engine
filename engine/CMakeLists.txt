@@ -80,7 +80,6 @@ PUBLIC
   <set>
   <cstring>
   <source_location>
-  <fmt/core.h>
   <unordered_map>
   <map>
   <functional>
@@ -89,4 +88,9 @@ PUBLIC
   <type_traits>
   <cstdint>
   <cstddef>
+  
+  # 3rd-party headers
+  <fmt/core.h>
+  <glm/glm.hpp>
+  <glm/gtc/matrix_transform.hpp>
 )
