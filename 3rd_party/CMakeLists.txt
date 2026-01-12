@@ -82,6 +82,13 @@ target_link_libraries(libimgui PUBLIC SDL3::SDL3 PUBLIC opengl32)
 add_subdirectory(glad)
 add_subdirectory(stb)
 
+FetchContent_Declare(
+  Jolt
+  GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
+  GIT_TAG v5.5.0
+)
+FetchContent_MakeAvailable(Jolt)
+
 if(SDL_SHARED)
   set_target_properties(SDL3-shared PROPERTIES 
           FOLDER "Deps"

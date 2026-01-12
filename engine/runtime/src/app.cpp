@@ -7,6 +7,7 @@
 #include "runtime/batcher.hpp"
 #include "runtime/file_watcher.hpp"
 #include "runtime/input.hpp"
+#include "runtime/time.hpp"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -107,7 +108,7 @@ App::App(CmdlineArgs args)
 
 void App::run() {
   bool quit = false;
-  auto last_time = std::chrono::steady_clock::now();
+  auto last_time = Time::now();
   
   while(!quit)
   {
@@ -116,11 +117,11 @@ void App::run() {
     
     commands_->execute();
 
-    auto now = std::chrono::steady_clock::now();
-    std::chrono::duration<double> delta = now - last_time;
+    auto now = Time::now();
+    Duration delta = now - last_time;
     last_time = now;
-    float dt = static_cast<float>(delta.count());
-      
+    float dt = static_cast<float>(delta.sec());
+
     SDL_Event event;
     while(SDL_PollEvent(&event))
     {

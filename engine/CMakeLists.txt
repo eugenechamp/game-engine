@@ -29,6 +29,8 @@ set(HEADERS
   runtime/include/runtime/assets.hpp
   runtime/include/runtime/loader.hpp
   runtime/include/runtime/input.hpp
+  runtime/include/runtime/time.hpp
+  runtime/include/runtime/timer.hpp
 )
 
 set(SOURCES
@@ -45,7 +47,8 @@ set(SOURCES
   io.cpp 
   runtime/src/file_watcher.cpp
   runtime/src/input.cpp
-  
+  runtime/src/time.cpp
+  runtime/src/timer.cpp
 )
 
 target_sources(engine-runtime PRIVATE ${SOURCES} ${HEADERS})
@@ -62,6 +65,7 @@ target_link_libraries(
   PUBLIC glm::glm
   PUBLIC assimp
   PUBLIC stblib
+  PUBLIC Jolt
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})

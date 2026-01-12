@@ -9,7 +9,7 @@ void Events::run() {
       continue;
     }
 
-    for(auto& handler : data.handlers) 
+    for(auto& handler : data.handlers)
     {
       handler(data.events.get());
     }

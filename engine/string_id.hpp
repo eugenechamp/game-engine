@@ -3,7 +3,7 @@
 
 class StringID {
 public:
-  using Type = u32;
+  using Id = u32;
 
 public:
   constexpr StringID()  = default;
@@ -14,6 +14,10 @@ public:
   { }
 
   static constexpr auto from_string(std::string_view str) -> StringID {
+    return {};
+  }
+
+  static constexpr auto id_from_string(std::string_view str) -> Id {
     return {};
   }
 
@@ -28,12 +32,12 @@ public:
     return type_;
   }
 
-  constexpr auto id() -> Type {
+  constexpr auto id() -> Id {
     return type_;
   }
 
 private:
-  Type type_;
+  Id type_;
 };
 
 #define SID(str) StringID::from_string(str).id()
