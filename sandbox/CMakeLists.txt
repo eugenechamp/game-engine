@@ -1,7 +1,5 @@
 add_executable(Sandbox)
 
-option(BUILD_SHARED_LIBS OFF)
-
 target_sources(Sandbox PRIVATE src/main.cpp)
 
 target_link_libraries(Sandbox PUBLIC engine-runtime)

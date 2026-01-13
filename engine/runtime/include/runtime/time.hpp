@@ -46,14 +46,19 @@ private:
 
 public:
   constexpr auto sec() const -> SecondsRepr {
-    // we need a higher precision for seconds
-    return interval_ns_ * 0.001 * 0.001 * 0.001;
+    return interval_ns_ * 0.001 * 0.001 * 0.001; // we need a higher precision for seconds
+  }
+  constexpr auto ms_f64() const -> f64 {
+    return us_f64() * 0.001;
+  }
+  constexpr auto us_f64() const -> f64 {
+    return ns() * 0.001;
   }
   constexpr auto ms() const  -> Repr {
-    return us() * 0.001;
+    return Repr(us() * 0.001);
   }
   constexpr auto us() const  -> Repr {
-    return ns() * 0.001;
+    return Repr(ns() * 0.001);
   }
   constexpr auto ns() const  -> Repr {
     return interval_ns_;

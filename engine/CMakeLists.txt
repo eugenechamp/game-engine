@@ -1,4 +1,4 @@
-add_library(engine-runtime)
+add_library(engine-runtime STATIC)
 
 set(HEADERS 
   runtime/include/runtime/app.hpp
@@ -67,6 +67,24 @@ target_link_libraries(
   PUBLIC stblib
   PUBLIC Jolt
 )
+
+if(MSVC)
+  target_compile_options(engine-runtime 
+    PUBLIC /MP 
+    PUBLIC /W4 
+    PUBLIC /EHsc- 
+    PUBLIC /GR-
+  )
+else()
+  # additional: -ftime-trace
+  target_compile_options(engine-runtime 
+    PUBLIC -Wall 
+    PUBLIC -fno-rtti 
+    PUBLIC -fno-exceptions 
+    PUBLIC -Wextra 
+    PUBLIC -Wpedantic
+  )
+endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${HEADERS})
 

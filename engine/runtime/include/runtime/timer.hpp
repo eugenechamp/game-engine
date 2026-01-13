@@ -12,7 +12,7 @@ enum class TimerMode : i8 {
 class Timer {
 public:
   Timer() = default;
-  Timer(Duration timeout)
+  explicit Timer(Duration timeout)
     : timeout_{ timeout }, 
       stopped_{ false }
   { }
@@ -33,13 +33,74 @@ private:
   TimePoint time_   = {};
   Duration passed_  = {};
   Duration timeout_ = {};
-  u32 expire_count_ = {};
-  TimerMode mode_   = {};
+  [[maybe_unused]] u32 expire_count_ = {};
+  [[maybe_unused]] TimerMode mode_   = {};
   bool stopped_     = false;
 };
 
-/// TODO: implement
-class TickTimer;
+class TickTimer {
+public:
+  TickTimer()  = default;
+  ~TickTimer() = default;
+  
+  explicit TickTimer(Duration timeout)
+    : elapsed_{ Duration::zero() }, 
+      timeout_{ timeout }, 
+      stopped_{ false }
+  { }
+
+  void tick(f32 dt) {
+    if(is_stopped())
+    {
+      return;
+    }
+    elapsed_ += Duration::seconds(dt);
+  }
+
+  void start() {
+    stopped_ = false;
+  }
+  
+  void stop() {
+    stopped_ = true;
+  }
+
+  void reset() {
+    elapsed_ = Duration::zero();
+  }
+
+  void expires_after(Duration timeout) {
+    reset();
+    timeout_ = timeout;
+  }
+  
+  [[nodiscard]] auto elapsed() const -> Duration {
+    return elapsed_;
+  }
+
+  [[nodiscard]] auto restart() -> Duration {
+    Duration passed = elapsed_;
+    reset();
+    return passed;
+  }
+
+  [[nodiscard]] auto duration() const -> Duration {
+    return timeout_;
+  }
+
+  bool is_expired() const {
+    return elapsed_ >= timeout_;
+  }
+  
+  bool is_stopped() const {
+    return stopped_;
+  }
+
+private:
+  Duration elapsed_{ Duration::zero() };
+  Duration timeout_{ Duration::zero() };
+  bool stopped_{ false };
+};
 
 class Stopwatch {
 public:

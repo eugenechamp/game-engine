@@ -91,12 +91,14 @@ FetchContent_MakeAvailable(Jolt)
 
 if(SDL_SHARED)
   set_target_properties(SDL3-shared PROPERTIES 
-          FOLDER "Deps"
-          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
+    FOLDER "Deps"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
+  
+  target_compile_options(SDL3-shared  PRIVATE /MP /W4 /EHsc- /GR-)
 else()
   set_target_properties(SDL3-static PROPERTIES 
-          FOLDER "Deps"
-          RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
+    FOLDER "Deps"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>")
 endif()
 
 set_target_properties(flecs PROPERTIES 
@@ -113,3 +115,65 @@ set_target_properties(assimp PROPERTIES
   FOLDER "Deps"
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/$<CONFIG>"
 )
+
+if(MSVC)
+  target_compile_options(flecs 
+    PUBLIC /MP 
+    /GR-
+  )
+  target_compile_options(fmt PUBLIC
+    /MP 
+    /W4 
+    /GR-
+  )
+  
+  if(SDL_SHARED)
+    target_compile_options(SDL3-shared  PUBLIC /MP /EHsc- /GR-)
+  else()
+    target_compile_options(SDL3-static  PUBLIC /MP /EHsc- /GR-)
+  endif()
+  
+  target_compile_options(libimgui 
+    PUBLIC /MP
+    /W4
+    /GR-
+  )
+  target_compile_options(libglad 
+    PUBLIC /MP
+    /W4
+    /GR-
+  )
+  target_compile_options(stblib 
+    PUBLIC /MP
+    /W4
+    /GR-
+  )
+  target_compile_options(glm 
+    PUBLIC /MP
+    /W4
+    /GR-
+  )
+else() # additional: -ftime-trace
+  target_compile_options(flecs -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  target_compile_options(fmt -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  
+  if(SDL_SHARED)
+    target_compile_options(SDL3-shared 
+      PRIVATE -Wall 
+      PRIVATE -fno-rtti 
+      PRIVATE -fno-exceptions 
+      PRIVATE -Wextra 
+      PRIVATE -Wpedantic
+    )
+  else()
+    target_compile_options(SDL3-static PRIVATE -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  endif()
+
+  target_compile_options(libimgui PRIVATE -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  target_compile_options(libglad PRIVATE -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  target_compile_options(stblib PRIVATE -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+  target_compile_options(glm PRIVATE -Wall -fno-rtti -fno-exceptions -Wextra -Wpedantic)
+endif()
+
+
+

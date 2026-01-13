@@ -73,7 +73,7 @@ class ImguiEditor : public Subsystem {
       .listen(&ImguiEditor::on_keyboard_event, this)
       .listen(&ImguiEditor::on_mouse_button,   this)
       .listen(&ImguiEditor::on_mouse_motion,   this);
-    
+
     const char* glsl_version = "#version 130";
     SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
@@ -284,8 +284,6 @@ class HelloTriangle : public Subsystem {
   using Subsystem::Subsystem;
   friend App;
 public:
-  // Inherited via Subsystem
-  
   void init(App& app) override
   {
   const char* vert_src = "#version 330 core\n"
@@ -403,8 +401,6 @@ private:
     
     glEnable(GL_DEPTH_TEST);
     
-    log_info("current working directory: {}", std::filesystem::current_path().string());
-    
     //shader.load("../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
     shader_handle = shaders.load("Surface_Shader", "../../sandbox/assets/shaders/surface.vert", "../../sandbox/assets/shaders/surface.frag");
 
@@ -464,7 +460,8 @@ private:
   void update(float dt) override {
     process_input();
     
-    if (runtime_timer.is_expired()) 
+    runtime_timer.tick(dt);
+    if (runtime_timer.is_expired())
     {
       log_info("{} seconds has passed. the program has been running for {} seconds", runtime_timer.duration().sec(), runtime_timer.elapsed().sec());
       runtime_timer.reset();
@@ -533,7 +530,7 @@ private:
   float camera_speed = 10.f;
   u32 uniform_buffer{};
   bool camera_fly = false;
-  Timer runtime_timer;
+  TickTimer runtime_timer;
 };
 
 enum class FramePhase {

@@ -18,7 +18,7 @@ protected:
 
 private:
   virtual void init(App&)             = 0;
-  virtual void fixed_update(float dt)   {}
+  virtual void fixed_update(float [[maybe_unused]] dt)   {}
   virtual void update(float dt)       = 0;
   virtual void shutdown(App&)         = 0;
   
