@@ -5,7 +5,9 @@ class World;
 class Commands;
 class Subsystem;
 class Events;
-class Window;
+struct Window;
+
+class Duration;
 
 template<typename AssetType>
 class AssetCache;

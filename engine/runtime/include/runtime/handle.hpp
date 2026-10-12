@@ -39,7 +39,7 @@ private:
   { }
  
 private:
-  static constexpr IndexType invalid = -1;
+  static constexpr IndexType invalid = IndexType(-1);
 
 private:
   IndexType index_     = invalid;

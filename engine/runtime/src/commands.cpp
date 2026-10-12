@@ -1,10 +1,11 @@
 #include "runtime/commands.hpp"
+#include <type_traits>
 
 void Commands::execute() {
   swap_queue_buffers();
   // NOTE: try executing and erasing the task right after
   // implement a draining iterator or smth...
-  for (auto& task : read_queue_) 
+  for (const Fn<void()>& task : read_queue_)
   {
     task();
   }

@@ -1,37 +1,54 @@
 #include <runtime/events.hpp>
 
 void Events::run() {
-  for(auto& [type, data] : events_) 
+  
+  std::swap(write_, read_);
+  
+  for (u32 i{}; auto& events : read_)
   {
-    data.events->swap_buffers();
-    if(data.events->is_empty())
+    Vec<char>& vec = *(Vec<char>*)(events.buff); // UB btw
+    if (!vec.empty())
     {
-      continue;
-    }
-
-    for(auto& handler : data.handlers)
-    {
-      handler(data.events.get());
+      auto& evt_data = evt_data_[i];
+      for(auto& handler : evt_data.handlers)
+      {
+        auto count = u32(vec.size());
+        handler(*this, (void*)vec.data(), count);
+      }
+    
+      evt_data.clear(&events);
     }
     
-    data.events->clear();
+    i++;
   }
 }
 
-void Events::trigger_impl(void *events, StringID type) {
-  /*
-  auto& event_data = events_.at(type);
+auto Events::get_event_data(StringID sid) -> EventData& {
+  assert(evt_table_.find(sid) != evt_table_.end());
 
-  data.events->swap_buffers();
-  if(data.events->is_empty()) {
-    return;
-  }
-  
-  for(auto& handler : data.handlers) 
+  u32 index = evt_table_.at(sid);
+
+  return evt_data_[index];
+}
+
+void Events::trigger_impl(Span<EventHandlerType> handlers, const void* events, u32 size) {
+  for (auto& handler : handlers)
   {
-    handler(data.events.get());
+    handler(*this, events, size);
   }
-    
-  data.events->clear();
-  */
+}
+
+auto Events::register_event(EventData&& event_data) -> Pair<UntypedEvents&, UntypedEvents&> {
+  auto it = evt_table_.find(event_data.sid);
+
+  if (it != evt_table_.end())
+  {
+    log_error("tried to register {} event more than once", event_data.name);
+  }
+
+  u32 index = (u32)evt_data_.size();
+  evt_table_.emplace(std::pair{ event_data.sid, index });
+  evt_data_.emplace_back(std::move(event_data));
+
+  return { write_.emplace_back(), read_.emplace_back() };
 }

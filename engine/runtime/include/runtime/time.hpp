@@ -18,7 +18,7 @@ public:
 
   static constexpr auto seconds(SecondsRepr secs) -> Duration {
     constexpr auto ratio = 1'000'000'000;
-    return Duration(secs * ratio);
+    return Duration(Repr(secs * ratio));
   }
 
   static constexpr auto milliseconds(Repr ms) -> Duration {
@@ -80,7 +80,7 @@ public:
   }
 
   constexpr auto operator*=(f64 multiplier) -> Duration& {
-    interval_ns_ *= multiplier;
+    interval_ns_ = Repr(interval_ns_ * multiplier);
     return *this;
   }
 
@@ -90,7 +90,7 @@ public:
   }
 
   constexpr auto operator/=(f64 divisor) -> Duration& {
-    interval_ns_ /= divisor;
+    interval_ns_ = Repr(interval_ns_ * divisor);
     return *this;
   }
 

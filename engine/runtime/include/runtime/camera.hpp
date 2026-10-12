@@ -22,7 +22,7 @@ public:
   void perspective(float fovy, float aspect_ratio, float near, float far)
   {
     type_ = projection_type::perspective;
-    fovy_ = fovy_;
+    fovy_ = fovy;
     aspect_ratio_ = aspect_ratio;
     near_ = near;
     far_ = far;
@@ -31,7 +31,7 @@ public:
   void ortho(float fovy, float aspect, float near = 0.1f, float far = 1000.f)
   {
     type_ = projection_type::orthographic;
-    fovy_ = fovy_;
+    fovy_ = fovy;
     aspect_ratio_ = aspect;
     near_ = near;
     far_ = far;

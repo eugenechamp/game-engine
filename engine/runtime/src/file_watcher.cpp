@@ -44,7 +44,7 @@ void FileWatcher::run(App& app) {
         {
           value.last_write = last_write;
 
-          app.commands().enqueue([key, value] { value.callback(key); });
+          app.commands().enqueue([key, &value] { value.callback(key); });
         }
       }
       mutex.unlock();

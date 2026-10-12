@@ -26,6 +26,16 @@ auto Timer::duration() const -> Duration {
   return timeout_;
 }
 
+bool Timer::reset_on_expired() {
+  if(is_expired())
+  {
+    reset();
+    return true;
+  }
+
+  return false;
+}
+
 auto Timer::restart() -> Duration {
   Duration passed = elapsed();
   reset();

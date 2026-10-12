@@ -4,23 +4,31 @@
 #include "runtime/events.hpp"
 #include "runtime/subsystem.hpp"
 #include "runtime/window.hpp"
-#include "runtime/batcher.hpp"
+#include "runtime/emitter.hpp"
 #include "runtime/file_watcher.hpp"
 #include "runtime/input.hpp"
 #include "runtime/time.hpp"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
+#include <algorithm>
 
-void App::init_subsystem(Subsystem *subsystem) {
+void App::init_subsystem(Subsystem *subsystem, StringID sid) {
   // should I actually be doing this? maybe initialize it right away after the constructor call
-  commands_->enqueue([this, subsystem] { subsystem->init(*this); });
+  //commands_->enqueue([this, subsystem, sid] { subsystem->init(*this); subsystems_.emplace(std::pair{ sid, subsystem }); });
+  commands_->enqueue([this, subsystem, sid] { subsystem->init(); subsystems_.emplace_back(subsystem); });
 }
 
 App::App() {
   commands_ = Unique<Commands>(new Commands);
-  events_   = Unique<Events>(new Events(*this));
-  
+  events_   = Unique<Events>(new Events(res_, *world_));
+  world_    = Unique<World>(new World(*this));
+  states_   = Unique<States>(new States(events()));
+  subsystem_manager_ = Unique<SubsystemManager>(new SubsystemManager(*this, *commands_));
+
+  fixed_framerate_ = 60;
+  frame_rate_ = 30;
+
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
   {
     log_fatal("Error: SDL_Init(): {}", SDL_GetError());
@@ -50,7 +58,6 @@ App::App() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #else
     // GL 3.0 + GLSL 130
-  const char* glsl_version = "#version 130";
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -62,12 +69,12 @@ App::App() {
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-  float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+  [[maybe_unused]] float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
   SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
   
   window_ = std::make_unique<Window>(Window {
-    .width = 640,
-    .height = 480,
+    .width = 1280,
+    .height = 720,
     .handle = SDL_CreateWindow("App", 1280, 720, window_flags),
     .title = "MyGame"
   });
@@ -102,25 +109,56 @@ App::~App() {
 
 }
 
-App::App(CmdlineArgs args)
+App::App([[maybe_unused]] CmdlineArgs args)
  : App()
 { }
 
 void App::run() {
   bool quit = false;
   auto last_time = Time::now();
-  
-  while(!quit)
-  {
-    glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    commands_->execute();
+  float time_elapsed = 0.f;
 
+  while(!quit)
+  { 
+    commands_->execute();
+    
     auto now = Time::now();
     Duration delta = now - last_time;
     last_time = now;
-    float dt = static_cast<float>(delta.sec());
+    
+    float dt = float(delta.sec());
+    float target_frametime = (1.f / frame_rate_);
+    float frametime = (frame_rate_ == 0) ? dt : target_frametime;
+
+    float fixed_timestep = 1.f / fixed_framerate_;
+
+    for (auto iter = schedule_.begin(); iter != schedule_.end();)
+    {
+      if (iter->first <= now)
+      {
+        iter->second();
+        auto next = ++iter;
+        schedule_.erase(iter);
+        iter = next;
+      }
+      else
+      {
+        break;
+      }
+    }
+
+    /*for (auto& [timepoint, fn] : schedule_)
+    {
+      if (now >= timepoint)
+      {
+        break;
+      }
+      fn();
+    }
+
+    std::erase_if(schedule_, [now](const auto& node) {
+      return now >= node.first;
+    });*/
 
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -128,25 +166,32 @@ void App::run() {
       switch (event.type)
       {
       case SDL_EVENT_QUIT: {
-        events().batch<SDL_QuitEvent>().push_back(event.quit);
+        events().trigger(event.quit);
         quit = true;
       } break;
       case SDL_EVENT_MOUSE_MOTION: {
-        events().batch<SDL_MouseMotionEvent>().push_back(event.motion);
+        events().trigger<SDL_MouseMotionEvent>(event.motion);
       }break;
       case SDL_EVENT_MOUSE_WHEEL: {
         //events().batch<SDL_MouseWheelEvent>().push_back(event.wheel);
       }break;
       case SDL_EVENT_MOUSE_BUTTON_DOWN:
       case SDL_EVENT_MOUSE_BUTTON_UP: {
-        events().batch<SDL_MouseButtonEvent>().push_back(event.button);
+        events().trigger<SDL_MouseButtonEvent>(event.button);
       }break;
       case SDL_EVENT_TEXT_INPUT: {
-        events().batch<SDL_TextInputEvent>().push_back(event.text);
+        events().trigger<SDL_TextInputEvent>(event.text);
       } break;
       case SDL_EVENT_KEY_DOWN:
       case SDL_EVENT_KEY_UP: {
-        events().batch<SDL_KeyboardEvent>().push_back(event.key);
+        events().trigger<SDL_KeyboardEvent>(event.key);
+      } break;
+      case SDL_EVENT_WINDOW_RESIZED: {
+        window_->width = event.window.data1;
+        window_->height = event.window.data2;
+        
+        // remove
+        glViewport(0, 0, window_->width, window_->height);
       } break;
               
       //case SDL_EVENT_DISPLAY_ORIENTATION:
@@ -213,17 +258,46 @@ void App::run() {
       };
     }
      
-    for (auto& [key, subsystem] : subsystems_)
+    //for (auto& [key, subsystem] : subsystems_)
+    
+    
+    /*i32 fixed_step_updates = 0;
+    time_elapsed += dt;
+    while ((time_elapsed - fixed_timestep) >= fixed_timestep)
     {
-      if (subsystem->run_condition(*this))
+      fixed_step_updates++;
+      time_elapsed -= fixed_timestep;
+    }
+
+    for (auto& subsystem : subsystems_)
+    {
+      if (subsystem->run_condition())
       {
+        for (i32 i = 0; i < fixed_step_updates; i++)
+        {
+          subsystem->fixed_update(fixed_timestep);
+        }
         subsystem->update(dt);
       }
-    }
+    }*/
+    
+    subsystem_manager_->update(dt);
+
+    world_->get().progress(dt);
 
     events_->run();
     
     SDL_GL_SwapWindow(window_->handle);
+    
+    // doesn't work btw
+    if (frame_rate_ != 0) // fps is limited
+    {
+      if (dt < target_frametime)
+      {
+        auto sleep_time = std::chrono::duration<float>(target_frametime - dt);
+        //std::this_thread::sleep_for(sleep_time);
+      }
+    }
   }
 }
 

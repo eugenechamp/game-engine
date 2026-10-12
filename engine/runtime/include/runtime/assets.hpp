@@ -5,7 +5,7 @@
 #include "loader.hpp"
 
 template<typename AssetType>
-struct AssetCache {
+class AssetCache {
   using Id = std::string;
   using IndexType   = u16;
   using VersionType = u16;
@@ -23,7 +23,6 @@ public:
     }
 
     HandleType handle;
-
     LoadContext load_ctx{ .paths = { path, std::forward<Filepaths>(paths)... } };
 
     if (!freelist_.empty())
@@ -55,13 +54,14 @@ public:
       handle = HandleType{ index, 1 };
     }
 
-    for (auto& file : load_ctx.paths) {
-      FileWatcher::watch(file, [this, handle, ctx = load_ctx](const std::fs::path& path) {
+    for (std::fs::path& file : load_ctx.paths) {
+      std::cout << file << "\n";
+      FileWatcher::watch(file, [this, handle, ctx = load_ctx](const std::fs::path&) {
         auto& asset = this->get(handle);
         asset = std::move(Loader<AssetType>{}.load(ctx));
       });
     }
-
+    
     return handle;
   }
 
@@ -123,7 +123,7 @@ public:
 
   auto get(HandleType handle) -> AssetType& {
     assert(handle);
-    assert(registry_.at(handle.index_).version == handle.version_);
+    assert(registry_[handle.index_].version == handle.version_);
 
     return registry_[handle.index_].asset;
   }

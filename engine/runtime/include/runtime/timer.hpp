@@ -25,6 +25,7 @@ public:
   [[nodiscard]] auto elapsed() -> Duration;
   [[nodiscard]] auto restart() -> Duration;
   [[nodiscard]] auto duration() const -> Duration;
+  [[nodiscard]] bool reset_on_expired();
 
   bool is_expired();
   bool is_stopped() const;
@@ -69,6 +70,26 @@ public:
     elapsed_ = Duration::zero();
   }
 
+  // working name
+  [[nodiscard]] bool on_expired() {
+    if (is_expired())
+    {
+      elapsed_ -= duration();
+      return true;
+    }
+
+    return false;
+  }
+
+  bool reset_on_expired() {
+    if(is_expired())
+    {
+      reset();
+      return true;
+    }
+    return false;
+  }
+
   void expires_after(Duration timeout) {
     reset();
     timeout_ = timeout;
@@ -89,7 +110,17 @@ public:
   }
 
   bool is_expired() const {
-    return elapsed_ >= timeout_;
+    assert(is_valid());
+    return elapsed_ > timeout_;
+  }
+  
+  bool is_valid() const {
+    return timeout_ > Duration::zero();
+  }
+
+  auto expired_count() const -> u32 {
+    assert(is_valid());
+    return elapsed_.ns() / timeout_.ns();
   }
   
   bool is_stopped() const {
@@ -102,6 +133,13 @@ private:
   bool stopped_{ false };
 };
 
+/// that should be a minimal version of the Timer class that consumes less memory
+/// can be used if there's no need to stop the timer
+class MiniTimer {
+
+};
+
+// utility for measuring the elapsed time since start
 class Stopwatch {
 public:
   void start();
@@ -114,23 +152,46 @@ public:
   bool is_stopped() const;
 
 private:
-  TimePoint start_  = {};
+  TimePoint start_  = Time::now();
   Duration elapsed_ = {};
   bool stopped_     = false;
 };
 
-template<Callable<void(Duration)> Callback>
-class [[nodiscard]] ScopedTimer {
-  /// NOTE: you could generalize this class (turn into ScopedCallback for example)
+// A timer that never stops
+class Countdown {
 public:
-  ScopedTimer(Callback&& callback)
-    : callback_{callback}
-  { }
-  
-  ~ScopedTimer() {
-    callback_(clock_.elapsed());
+  void tick(f32 dt) {
+
   }
+
+  bool is_expired() const {
+
+  }
+
 private:
-  Stopwatch clock_;
-  Callback callback_;
+  Duration elapsed_;
+  Duration duration_;
 };
+
+// A tick timer that never stops
+class TickCountdown {
+public:
+
+private:
+};
+
+//template<Callable<void(Duration)> Callback>
+//class [[nodiscard]] ScopedTimer {
+//  /// NOTE: you could generalize this class (turn into ScopedCallback for example)
+//public:
+//  ScopedTimer(Callback&& callback)
+//    : callback_{callback}
+//  { }
+//  
+//  ~ScopedTimer() {
+//    callback_(clock_.elapsed());
+//  }
+//private:
+//  Stopwatch clock_;
+//  Callback callback_;
+//};

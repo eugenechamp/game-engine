@@ -1,8 +1,11 @@
 #pragma once
 #include<type_traits>
-    
+
+using True  = std::true_type;
+using False = std::false_type;
+
 template<typename T>
-struct Batcher;
+struct Emitter;
 
 namespace traits {
   namespace _ {
@@ -27,12 +30,12 @@ namespace traits {
     };
   
     template<typename T>
-    struct is_batcher {
+    struct is_emitter {
       static constexpr bool value = false;
     };
 
     template<typename T>
-    struct is_batcher<Batcher<T>> {
+    struct is_emitter<Emitter<T>> {
       static constexpr bool value = true;
     };
 
@@ -42,6 +45,3 @@ namespace traits {
     };
   }
 }
-
-template<typename C, typename F>
-concept Callable = std::is_function_v<F> && std::is_same_v<F, typename traits::_::decay_functor<C>::type>;

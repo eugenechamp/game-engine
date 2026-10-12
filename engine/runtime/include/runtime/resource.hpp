@@ -1,5 +1,11 @@
 #pragma once
 #include "def.hpp"
+
+struct Resource {};
+
+template<typename T>
+concept ResourceType = std::derived_from<T, Resource>;
+
 /// TODO: encapsulate it better 
 struct ResourceStorageBase {
   ResourceStorageBase() = default;
@@ -8,14 +14,15 @@ struct ResourceStorageBase {
 
 template<typename T>
 struct ResourceStorage : ResourceStorageBase {
-  ResourceStorage() = default;
+  ResourceStorage()  = default;
+  ~ResourceStorage() = default;
+  
   explicit ResourceStorage(T&& r) 
-    : resource(std::move(r)) 
+    : resource(std::move(r))
   { }
 
   T resource;
-  ~ResourceStorage() = default;
 };
 
-using ResourceID = size_t;
-using Resources  = HashMap<ResourceID, Unique<ResourceStorageBase>>;
+enum class ResourceID : size_t {};
+using Resources = HashMap<ResourceID, Unique<ResourceStorageBase>>;

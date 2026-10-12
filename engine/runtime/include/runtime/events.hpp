@@ -1,51 +1,82 @@
 #pragma once
-#include "app.hpp"
+#include "resource.hpp"
 #include "type_traits.hpp"
+#include "fwd.hpp"
+#include "meta.hpp"
+#include "emitter.hpp"
+#include "core/pair.hpp"
 
-//#include "def.hpp"
-//#include "meta.hpp"
-//#include "batcher.hpp"
+struct Event {
+protected:
+  struct Triggerable {};
+  struct DisallowTransfer {};
+};
+
+template<typename T>
+concept EventType = std::derived_from<Event, T>;
 
 class Events final {
   friend class App;
 private:
-  Events(App& app) 
-    : app_{app}
+  explicit Events(Resources& res, World& world) 
+    : res_{res}, 
+      world_{world}
   { }
 
 public:
   ~Events() = default;
+
 public:
   template<typename EventType>
-  auto add_event(u32 reserved_amount = {}) -> Events& 
-  {
-    constexpr auto sid = core::type_sid<EventType>();
-
-    auto it = events_.find(sid);
-    if (it != events_.end())
-    {
-      log_error("{} event was registered twice", core::nameof<EventType>());
-    }
-
-    Unique<EventStorageBase> storage(new EventStorage<EventType>());
-
-    events_.emplace(std::pair{
-      sid, 
-      EventData {.events = std::move(storage) }
+  auto add_event(u32 reserved_amount = {}) -> Events& {
+    constexpr auto sid    = core::type_sid<EventType>();
+    std::string_view name = core::nameof<EventType>();
+    
+    auto [primary, secondary] = register_event(EventData {
+      .handlers = {},
+      .clear = [](UntypedEvents* events) {
+        Vec<EventType>& vec = *(Vec<EventType>*)events;
+        vec.clear();
+      },
+      .destroy = [](UntypedEvents* events){ 
+        Vec<EventType>& vec = *(Vec<EventType>*)events;
+        vec.clear();
+      },
+      .name = std::string(name.begin(), name.end()),
+      .sid = sid,
+      .size_of = sizeof(EventType),
     });
+
+    Vec<EventType>* primary_vec = ::new((void*)primary.buff) Vec<EventType>();
+    primary_vec->reserve(reserved_amount);
+
+    Vec<EventType>* secondary_vec = ::new((void*)secondary.buff) Vec<EventType>();
+    secondary_vec->reserve(reserved_amount);
     
     return *this;
   }
+  
+  //template<typename EventType, typename... Args>
+  //auto listen(Invocable<void(const EventType&, Args...)> auto&& handler) -> Events& {
+  //
+  //}
+
+  template<typename EventType, typename Instance, typename... Args>
+  auto listen(auto&& handler) -> Events& {
+    constexpr auto sid = core::type_sid<EventType>();
+    get_event_data(sid).handlers.emplace_back(std::move(handler));
+    return *this;
+  }
+
+  //template<typename EventType, typename Instance, typename... Args>
+  //auto listen(Invocable<void(const Instance*, const EventType&, Args...)> auto&& handler) -> Events& {
+
+  //}
 
   template<typename EventType, typename... Res>
   auto listen(void(*handler)(Span<const EventType>, Res...)) -> Events& {
-    
-    auto wrapper = [this, handler](const void* events) {
-      Vec<EventType>& e = ((EventStorage<EventType>*)events)->read_buff_;
-      handler(Span<const EventType>(e), get_resource<Res>(*this)...);
-    };
-
-    events_.at(core::type_sid<EventType>()).handlers.push_back(std::move(wrapper));
+    constexpr auto sid = core::type_sid<EventType>();
+    get_event_data(sid).handlers.emplace_back(FreeFunctionHandlerSpan{handler});
     
     return *this;
   }
@@ -53,69 +84,123 @@ public:
   template<typename Instance, typename EventType, typename... Args>
   auto listen(void(*handler)(Instance*, Span<const EventType>, Args...)) -> Events& {
 
-    auto wrapper = [handler](const void* events) {
+    /*auto wrapper = [handler](const void* events) {
       Vec<EventType>& e = ((EventStorage<EventType>*)events)->read_buff_;
       handler(Span<const EventType>(e));
-    };
+    };*/
 
     return *this;
   }
 
   template<typename Instance, typename EventType, typename... Res>
   auto listen(void(Instance::*handler)(Span<const EventType>, Res...), Instance* instance) -> Events& {
-
-    auto wrapper = [handler, instance](const void* events) {
-      Vec<EventType>& e = ((EventStorage<EventType>*)events)->read_buff_;
-      (instance->*handler)(Span<const EventType>(e), get_resource<Res>()...);
-      //handler(Span<const EventType>(e));
-    };
-    events_.at(core::type_sid<EventType>()).handlers.push_back(std::move(wrapper));
+    
+    constexpr auto sid = core::type_sid<EventType>();
+    get_event_data(sid).handlers.emplace_back(MemberFnHandlerSpan{handler, instance});
+    
     return *this;
   }
 
-  auto unlisten(auto handler) -> Events& {
-    // NOTE: with the current implementation it's not supported atm,
-    // but will be in the future
+  template<typename Instance, typename EventType, typename... Res>
+  auto listen(void(Instance::*handler)(EventType, Res...), Instance* instance) -> Events& {
+    using event_type = std::remove_cvref_t<EventType>;
+
+    constexpr auto sid = core::type_sid<event_type>();
+    get_event_data(sid).handlers.emplace_back(MemberFnHandler{ handler, instance });
+
+    return *this;
+  }
+  
+  template<typename EventType, typename Instance, typename... Res>
+  auto unlisten(void(Instance::*handler)(Viewer<EventType>, Res...), Instance* instance) -> Events& {
     
+    EventData& data = get_event_data(core::type_sid<EventType>());
+    
+    MemberFnHandlerSpan delegate{ handler, instance };
+
+    for (u32 i{}; i < data.handlers.size(); i++)
+    {
+      auto* ptr = data.handlers[i].target<decltype(delegate)>();
+      if (ptr && ptr->fn == delegate.fn && ptr->instance == delegate.instance)
+      {
+        //std::swap(data.handlers[i], data.handlers.back());
+        data.handlers[i].swap(data.handlers.back());
+        data.handlers.resize(data.handlers.size() - 1);
+        break;
+      }
+    }
+
+    return *this;
+  }
+
+  template<typename EventType, typename Instance, typename... Res>
+  auto unlisten(void(Instance::* handler)(EventType, Res...), Instance* instance) -> Events& {
+    using event_type = std::remove_const_t<std::remove_reference_t<EventType>>;
+
+    EventData& data = get_event_data(core::type_sid<event_type>());
+    
+    MemberFnHandler delegate{ handler, instance };
+    
+    for (u32 i{}; i != data.handlers.size(); i++)
+    {
+      auto* ptr = data.handlers[i].target<decltype(delegate)>();
+      if (ptr && ptr->fn == delegate.fn && ptr->instance == delegate.instance)
+      {
+        std::swap(data.handlers[i], data.handlers.back());
+        data.handlers.resize(data.handlers.size() - 1);
+        break;
+      }
+    }
     return *this;
   }
 
   template<typename EventType>
   void trigger(const EventType& event) {
-    auto events = Span{ event, 1ull };
-    trigger_impl(events, core::type_sid<EventType>());
+    Span events = Span{ &event, 1ull };
+    trigger(events);
   }
 
   template<typename EventType>
   void trigger(Viewer<EventType> events) {
-    /// TODO:
+    constexpr auto sid = core::type_sid<EventType>();
+    
+    EventData& data = get_event_data(sid);
 
-    //using event_type = typename EventCollection::value_type;
-  }
-
-  template<typename Iterator>
-  void trigger(Iterator first, Iterator last) {
-    /// TODO:
+    trigger_impl(data.handlers, events.data(), u32(events.size()));
   }
 
   template<typename EventType>
   auto view() /* -> Viewer<EventType> */ {
     /// TODO:
+    /// UPD: do I really have to?
   }
 
   template<typename EventType>
-  auto batch() -> Batcher<EventType> {
+  auto emit() -> Emitter<EventType> {
     constexpr auto sid = core::type_sid<EventType>();
-    auto* storage = events_.at(sid).events.get();
-    EventStorage<EventType>* event_storage = (EventStorage<EventType>*)storage;
-    Vec<EventType>& v = event_storage->write_buff_;
-    return Batcher<EventType>{v};
+    
+    u32 index = evt_table_[sid];
+    
+    Vec<EventType>& v = *(Vec<EventType>*)write_[index].buff;
+    
+    return Emitter<EventType>{v};
   }
 
 private:
   void run();
+
+private:
+  using EventHandlerType = Fn<void(Events&, const void*, u32)>;
   
-  void trigger_impl(void* events, StringID type);
+  struct EventData;
+  
+  auto get_event_data(StringID sid) -> EventData&;
+  
+  void trigger_impl(Span<EventHandlerType>, const void*, u32);
+  
+  struct UntypedEvents;
+  
+  auto register_event(EventData&&) -> Pair<UntypedEvents&, UntypedEvents&>;
 
   template<typename EventType>
   auto secure() {
@@ -123,67 +208,80 @@ private:
   }
 
   template<typename Res>
-  static auto get_resource(Events& events) -> Res {
+  auto get_resource() -> decltype(auto) {
     using namespace traits::_;
-
-    // using ResourceType = std::remove_reference_t<Res>;
-    if constexpr(is_batcher<Res>::value)
+    
+    //using ResourceType = std::remove_reference_t<Res>;
+    if constexpr(is_emitter<Res>::value)
     {
-      return events.batch<typename Res::element_type>();
+      return emit<typename Res::element_type>();
     }
     else
     {
-      return events.app_.get<Res>();
+      return static_cast<ResourceStorage<Res>*>(res_.at(core::type_sid<Res>()).get())->resource;
     }
   }
 
 private:
-  using EventHandlerType = Fn<void(const void*)>;
+  template<typename EventType, typename Instance, typename... Res>
+  struct MemberFnHandlerSpan {
+    void operator()(Events& events, const void* evt_view, u32 size) const {
+      Span<const EventType> span((const EventType*)evt_view, size);
+      (instance->*fn)(Span((const EventType*)evt_view, size), events.get_resource<Res>()...);
+    }
 
-  struct EventStorageBase {
-    virtual void clear() = 0;
-    virtual bool is_empty() = 0;
-    virtual void swap_buffers() = 0;
-    virtual ~EventStorageBase() = default;
+    void(Instance::* fn)(Viewer<EventType>, Res...);
+    Instance* instance;
   };
 
-  template<typename EventType>
-  struct EventStorage : EventStorageBase {
-    Vec<EventType> write_buff_;
-    Vec<EventType> read_buff_;
+  template<typename EventType, typename Instance, typename... Res>
+  struct MemberFnHandler {
+    void operator()(Events& events, const void* evt_view, u32 size) const {
+      
+      using event_type = std::remove_cvref_t<EventType>;
+      
+      Span<const event_type> span((const event_type*)evt_view, size);
+      
+      for (auto& event : span)
+      {
+        (instance->*fn)(event, events.get_resource<Res>()...);
+      }
+    }
 
-    void clear() override {
-      read_buff_.clear();
-    }
-    
-    bool is_empty() override {
-      return read_buff_.empty();
-    }
-
-    void swap_buffers() override {
-      std::swap(write_buff_, read_buff_);
-    }
+    void(Instance::* fn)(EventType, Res...);
+    Instance* instance;
   };
 
-  //struct EventStorage {
-  //  using BufferPlacement = char[sizeof(Vec<char>)];
-  //  BufferPlacement write_buff_;
-  //  BufferPlacement read_buff_;
-  //  
-  //  /*char write_buff_[sizeof(Vec<char>)];
-  //  char read_buff_[sizeof(Vec<char>)];*/
+  template<typename EventType, typename... Res>
+  struct FreeFunctionHandlerSpan {
+    void operator()(Events& events, const void* evt_view, u32 size) const {
+      Span span((const EventType*)evt_view, size);
+      fn(span, events.get_resource<Res>()...);
+    }
 
-  //  void swap_buffers() {
-  //    std::swap(write_buff_, read_buff_);
-  //  }
-  //};
+    void(*fn)(Viewer<EventType>, Res...);
+  };
+
+  using EventType = StringID;
+  
+  struct UntypedEvents {
+    char buff[sizeof(Vec<char>)]{};
+  };
 
   struct EventData {
-    Unique<EventStorageBase> events;
     Vec<EventHandlerType> handlers;
+    void(*clear)(UntypedEvents*);
+    void(*destroy)(UntypedEvents*);
+    std::string name;
+    StringID sid;
+    u32 size_of;
   };
   
-  using EventType = StringID;
-  HashMap<EventType, EventData> events_;
-  App& app_;
+  Resources& res_;
+  World& world_;
+
+  HashMap<EventType, u32> evt_table_;
+  Vec<EventData> evt_data_;
+  Vec<UntypedEvents> write_;
+  Vec<UntypedEvents> read_;
 };
